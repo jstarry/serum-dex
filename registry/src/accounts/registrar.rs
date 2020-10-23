@@ -20,8 +20,8 @@ pub struct Registrar {
     pub authority: Pubkey,
     /// Nonce to derive the program-derived address owning the vaults.
     pub nonce: u8,
-    /// Maps capability identifier to the bps fee rate earned for the capability.
-    pub capabilities_fees_bps: [u32; CAPABILITY_LEN as usize],
+    /// Maps capability identifier to the fee rate earned for the capability.
+    pub capabilities_fees: [u32; CAPABILITY_LEN as usize],
     /// Address of the capabilities list account, in the event we want to
     /// enforce access control on capabilities addresses.
     pub capabilities_list: Pubkey,
@@ -44,7 +44,7 @@ impl Registrar {
     /// Returns the capability id of the next available slot. Otherwise None,
     /// if full.
     pub fn next_free_capability_id(&self) -> Option<u8> {
-        for (idx, c) in self.capabilities_fees_bps.iter().enumerate() {
+        for (idx, c) in self.capabilities_fees.iter().enumerate() {
             if *c == 0 {
                 return Some(idx as u8);
             }
@@ -58,7 +58,7 @@ impl Registrar {
 
     // Assumes capability_id <= CAPABILITY_SIZE.
     pub fn fee_rate(&self, capability_id: usize) -> u32 {
-        self.capabilities_fees_bps[capability_id]
+        self.capabilities_fees[capability_id]
     }
 }
 

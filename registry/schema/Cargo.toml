@@ -1,0 +1,9 @@
+[package]
+name = "schema"
+version = "0.1.0"
+authors = ["armaniferrante <armaniferrante@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+serum-registry = { path = "../", features = ["client"] }
+borsh = { git = "https://github.com/project-serum/borsh", branch = "serum" }

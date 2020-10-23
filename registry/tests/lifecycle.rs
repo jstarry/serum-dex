@@ -53,7 +53,7 @@ fn lifecycle() {
         let registrar = client.registrar(&registrar).unwrap();
         assert_eq!(registrar.initialized, true);
         assert_eq!(registrar.authority, registrar_authority.pubkey());
-        assert_eq!(registrar.capabilities_fees_bps, [0; 32]);
+        assert_eq!(registrar.capabilities_fees, [0; 32]);
     }
 
     // Initialize the lockup program, vesting account, and whitelist the
@@ -117,21 +117,21 @@ fn lifecycle() {
     // Register capabilities.
     {
         let capability_id = 1;
-        let capability_fee_bps = 1234;
+        let capability_fee = 1234;
 
         let _ = client
             .register_capability(RegisterCapabilityRequest {
                 registrar,
                 registrar_authority: &registrar_authority,
                 capability_id,
-                capability_fee_bps,
+                capability_fee,
             })
             .unwrap();
 
         let registrar = client.registrar(&registrar).unwrap();
         let mut expected = [0; 32];
-        expected[capability_id as usize] = capability_fee_bps;
-        assert_eq!(registrar.capabilities_fees_bps, expected);
+        expected[capability_id as usize] = capability_fee;
+        assert_eq!(registrar.capabilities_fees, expected);
     }
 
     // Create entity.

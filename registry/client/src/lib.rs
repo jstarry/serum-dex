@@ -54,7 +54,7 @@ impl Client {
             registrar,
             registrar_authority,
             capability_id,
-            capability_fee_bps,
+            capability_fee,
         } = req;
         let accounts = [
             AccountMeta::new_readonly(registrar_authority.pubkey(), true),
@@ -65,7 +65,7 @@ impl Client {
             &signers,
             &accounts,
             capability_id,
-            capability_fee_bps,
+            capability_fee,
         )?;
         Ok(RegisterCapabilityResponse { tx })
     }
@@ -296,7 +296,7 @@ pub struct RegisterCapabilityRequest<'a> {
     pub registrar: Pubkey,
     pub registrar_authority: &'a Keypair,
     pub capability_id: u8,
-    pub capability_fee_bps: u32,
+    pub capability_fee: u32,
 }
 
 pub struct RegisterCapabilityResponse {

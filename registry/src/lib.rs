@@ -51,9 +51,8 @@ pub mod instruction {
         RegisterCapability {
             /// The identifier to assign this capability.
             capability_id: u8,
-            /// Capability fee in bps. The amount to pay a node for an
-            /// instruction fulfilling this duty.
-            capability_fee_bps: u32,
+            /// Capability fee interpreted by external program.
+            capability_fee: u32,
         },
         /// CreateEntity initializes the new "node" with the Registry,
         /// designated "inactive".

@@ -118,7 +118,7 @@ pub enum GovCommand {
         force_id: Option<u8>,
         /// Capability fee rate in basis points.
         #[clap(long)]
-        fee_bps: u32,
+        fee: u32,
         /// Adress of an initialized on-chain registrar
         #[clap(long)]
         registrar: Pubkey,
@@ -239,14 +239,14 @@ pub fn gov_cmd(ctx: &Context, registry_pid: Option<Pubkey>, gov_cmd: GovCommand)
             force_id,
             registrar,
             registrar_authority_file,
-            fee_bps,
+            fee,
         } => gov::register_capability(
             ctx,
             registry_pid,
             registrar,
             registrar_authority_file,
             force_id,
-            fee_bps,
+            fee,
         ),
     }
 }
@@ -349,7 +349,7 @@ mod gov {
         registrar: Pubkey,
         registrar_authority_file: String,
         force_id: Option<u8>,
-        capability_fee_bps: u32,
+        capability_fee: u32,
     ) -> Result<()> {
         let logger = serum_node_logging::get_logger("node/registry");
         let client = ctx.connect::<Client>(registry_pid)?;
@@ -371,7 +371,7 @@ mod gov {
             registrar,
             registrar_authority: &registrar_authority,
             capability_id,
-            capability_fee_bps,
+            capability_fee,
         })?;
 
         info!(

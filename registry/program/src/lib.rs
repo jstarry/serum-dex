@@ -53,8 +53,8 @@ fn entry<'a>(
         ),
         RegistryInstruction::RegisterCapability {
             capability_id,
-            capability_fee_bps,
-        } => register_capability::handler(program_id, accounts, capability_id, capability_fee_bps),
+            capability_fee,
+        } => register_capability::handler(program_id, accounts, capability_id, capability_fee),
         RegistryInstruction::CreateEntity {
             capabilities,
             stake_kind,

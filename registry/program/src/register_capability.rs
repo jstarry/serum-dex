@@ -10,7 +10,7 @@ pub fn handler<'a>(
     program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     capability_id: u8,
-    capability_fee_bps: u32,
+    capability_fee: u32,
 ) -> Result<(), RegistryError> {
     info!("handler: register_capability");
 
@@ -32,7 +32,7 @@ pub fn handler<'a>(
             state_transition(StateTransitionRequest {
                 registrar,
                 capability_id,
-                capability_fee_bps,
+                capability_fee,
             })
             .map_err(Into::into)
         },
@@ -71,10 +71,10 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     let StateTransitionRequest {
         mut registrar,
         capability_id,
-        capability_fee_bps,
+        capability_fee,
     } = req;
 
-    registrar.capabilities_fees_bps[capability_id as usize] = capability_fee_bps;
+    registrar.capabilities_fees[capability_id as usize] = capability_fee;
 
     info!("state-transition: success");
 
@@ -91,5 +91,5 @@ struct AccessControlRequest<'a> {
 struct StateTransitionRequest<'a> {
     registrar: &'a mut Registrar,
     capability_id: u8,
-    capability_fee_bps: u32,
+    capability_fee: u32,
 }

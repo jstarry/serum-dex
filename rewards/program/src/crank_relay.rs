@@ -169,9 +169,9 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RewardsError> {
     let amount = {
         let crank_capability_id = 0;
         let registrar = Registrar::unpack(&registrar_acc_info.try_borrow_data()?)?;
-        let fee_rate_bps = registrar.fee_rate(crank_capability_id) as u64;
+        let fee_rate = registrar.fee_rate(crank_capability_id) as u64;
         let events_processed = before_event_count - after_event_count;
-        events_processed * fee_rate_bps
+        events_processed * fee_rate
     };
 
     // Pay out reward, if the vault has enough funds.

@@ -24,6 +24,7 @@ members = [
     "node/context",
     "node/dev",
     "lockup/tests/stake",
+    "stake",
 ]
 exclude = [
     "dex",
@@ -31,4 +32,5 @@ exclude = [
     "rewards/program",
     "lockup/program",
     "lockup/tests/stake/program",
+    "stake/program",
 ]

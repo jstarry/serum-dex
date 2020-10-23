@@ -42,6 +42,7 @@ fn entry<'a>(
             withdrawal_timelock,
             deactivation_timelock_premium,
             reward_activation_threshold,
+            pool,
         } => initialize::handler(
             program_id,
             accounts,
@@ -50,6 +51,7 @@ fn entry<'a>(
             withdrawal_timelock,
             deactivation_timelock_premium,
             reward_activation_threshold,
+            pool,
         ),
         RegistryInstruction::RegisterCapability {
             capability_id,

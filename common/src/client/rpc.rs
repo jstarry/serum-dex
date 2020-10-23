@@ -88,6 +88,17 @@ pub fn create_token_account(
     Ok(spl_account)
 }
 
+pub fn new_mint(
+    client: &RpcClient,
+    payer_keypair: &Keypair,
+    owner_pubkey: &Pubkey,
+    decimals: u8,
+) -> Result<(Keypair, Signature)> {
+    let mint = Keypair::generate(&mut OsRng);
+    let s = create_and_init_mint(client, payer_keypair, &mint, owner_pubkey, decimals)?;
+    Ok((mint, s))
+}
+
 pub fn create_and_init_mint(
     client: &RpcClient,
     payer_keypair: &Keypair,

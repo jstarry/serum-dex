@@ -31,14 +31,14 @@ pub mod instruction {
             nonce: u8,
             /// Number of seconds that must pass for a withdrawal to complete.
             withdrawal_timelock: i64,
-            /// Number of seconds *in addition* to the `withdrawal_timelock` after
-            /// which an Entity becomes "deactivated".  The deactivation
-            /// countdown starts immediately once a node's stake amount is less
-            /// than the reward_activation_threshold.
+            /// Number of seconds *in addition* to the `withdrawal_timelock`
+            /// after which an Entity becomes "deactivated".
             deactivation_timelock_premium: i64,
             /// The amount of tokens that must be staked for an entity to be
             /// eligible for rewards.
             reward_activation_threshold: u64,
+            /// Address of the staking pool.
+            pool: Pubkey,
         },
         /// RegisterCapability registers a node capability for reward
         /// collection, or overwrites an existing capability (e.g., on fee

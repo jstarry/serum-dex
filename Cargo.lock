@@ -3096,6 +3096,7 @@ name = "serum-pool-schema"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "lazy_static",
  "solana-sdk",
 ]
 
@@ -3146,7 +3147,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "serum-common",
+ "serum-pool-schema",
  "serum-registry",
+ "serum-stake",
  "solana-client",
  "solana-client-gen",
  "spl-token",
@@ -3194,6 +3197,21 @@ dependencies = [
  "serum-common",
  "serum-rewards",
  "solana-client",
+ "solana-client-gen",
+ "spl-token",
+ "thiserror",
+]
+
+[[package]]
+name = "serum-stake"
+version = "0.1.0"
+dependencies = [
+ "arrayref",
+ "borsh",
+ "bytemuck",
+ "num_enum",
+ "serum-common",
+ "serum-pool-schema",
  "solana-client-gen",
  "spl-token",
  "thiserror",
@@ -3959,7 +3977,7 @@ dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.24",
  "quote 1.0.7",
- "syn 1.0.42",
+ "syn 1.0.45",
 ]
 
 [[package]]
@@ -4964,7 +4982,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d498dbd1fd7beb83c86709ae1c33ca50942889473473d287d56ce4770a18edfb"
 dependencies = [
  "proc-macro2 1.0.24",
- "syn 1.0.42",
+ "syn 1.0.45",
  "synstructure",
 ]
 

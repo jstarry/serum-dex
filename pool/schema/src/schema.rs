@@ -93,6 +93,23 @@ pub struct PoolState {
     pub custom_state: Vec<u8>,
 }
 
+#[cfg(not(feature = "program"))]
+lazy_static::lazy_static! {
+    pub static ref POOL_STATE_SIZE: u64 = PoolState {
+                tag: Default::default(),
+                pool_token_mint: Pubkey::new_from_array([0; 32]).into(),
+                assets: vec![AssetInfo {
+                        mint: Pubkey::new_from_array([0; 32]).into(),
+                        vault_address: Pubkey::new_from_array([0; 32]).into(),
+                }],
+                vault_signer: Pubkey::new_from_array([0; 32]).into(),
+                vault_signer_nonce: 0,
+                account_params: vec![],
+                admin_key: Some(Pubkey::new_from_array([0; 32]).into()),
+                custom_state: vec![],
+        }.try_to_vec().unwrap().len() as u64;
+}
+
 #[derive(Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct AssetInfo {
     pub mint: Address,

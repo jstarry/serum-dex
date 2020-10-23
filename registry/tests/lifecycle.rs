@@ -36,6 +36,10 @@ fn lifecycle() {
     let deactivation_timelock_premium = 1000;
     let reward_activation_threshold = 10_000_000;
     let registrar_authority = Keypair::generate(&mut OsRng);
+    let stake_pid: Pubkey = std::env::var("TEST_STAKE_PROGRAM_ID")
+        .unwrap()
+        .parse()
+        .unwrap();
     let InitializeResponse {
         registrar, nonce, ..
     } = client
@@ -46,6 +50,8 @@ fn lifecycle() {
             mint: srm_mint.pubkey(),
             mega_mint: msrm_mint.pubkey(),
             reward_activation_threshold,
+            pool_program_id: stake_pid,
+            pool_token_decimals: 3,
         })
         .unwrap();
     // Verify initialization.

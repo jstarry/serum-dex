@@ -16,7 +16,7 @@ pub const CAPABILITY_LEN: u8 = 32;
 pub struct Registrar {
     /// Set by the program on initialization.
     pub initialized: bool,
-    /// Priviledged account with the ability to register capabilities.
+    /// Priviledged account.
     pub authority: Pubkey,
     /// Nonce to derive the program-derived address owning the vaults.
     pub nonce: u8,
@@ -38,6 +38,8 @@ pub struct Registrar {
     pub mega_vault: Pubkey,
     /// The amount of tokens that must be deposited to be eligible for rewards.
     pub reward_activation_threshold: u64,
+    /// Address of the staking pool.
+    pub pool: Pubkey,
 }
 
 impl Registrar {

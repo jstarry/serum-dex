@@ -1,3 +1,5 @@
+use serum_common::client::rpc;
+use serum_pool_schema::POOL_STATE_SIZE;
 use serum_registry::accounts;
 use serum_registry::accounts::Watchtower;
 use serum_registry::client::{Client as InnerClient, ClientError as InnerClientError};
@@ -15,26 +17,30 @@ pub fn initialize(
     withdrawal_timelock: i64,
     deactivation_timelock_premium: i64,
     reward_activation_threshold: u64,
+    pool_program_id: &Pubkey,
+    pool_token_decimals: u8,
 ) -> Result<(Signature, Pubkey, u8), InnerClientError> {
     let registrar_kp = Keypair::generate(&mut OsRng);
     let (registrar_vault_authority, nonce) =
         Pubkey::find_program_address(&[registrar_kp.pubkey().as_ref()], client.program());
 
     // Create and initialize the vaults, both owned by the program-derived-address.
-    let srm_vault = serum_common::client::rpc::create_token_account(
+    let srm_vault = rpc::create_token_account(
         client.rpc(),
         mint,
         &registrar_vault_authority,
         client.payer(),
     )
     .map_err(|e| InnerClientError::RawError(e.to_string()))?;
-    let msrm_vault = serum_common::client::rpc::create_token_account(
+    let msrm_vault = rpc::create_token_account(
         client.rpc(),
         mega_mint,
         &registrar_vault_authority,
         client.payer(),
     )
     .map_err(|e| InnerClientError::RawError(e.to_string()))?;
+
+    let pool_state_kp = Keypair::generate(&mut OsRng);
 
     // Now build the final transaction.
     let instructions = {
@@ -51,23 +57,76 @@ pub fn initialize(
                 client.program(),
             )
         };
-        let accounts = [
-            AccountMeta::new(registrar_kp.pubkey(), false),
-            AccountMeta::new_readonly(srm_vault.pubkey(), false),
-            AccountMeta::new_readonly(msrm_vault.pubkey(), false),
-            AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
-        ];
 
-        let initialize_instr = serum_registry::instruction::initialize(
-            *client.program(),
-            &accounts,
-            *registrar_authority,
-            nonce,
-            withdrawal_timelock,
-            deactivation_timelock_premium,
-            reward_activation_threshold,
-        );
-        vec![create_safe_acc_instr, initialize_instr]
+        // Mint pool.
+
+        let create_pool_acc_instr = {
+            let lamports = client
+                .rpc()
+                .get_minimum_balance_for_rent_exemption(*POOL_STATE_SIZE as usize)
+                .map_err(InnerClientError::RpcError)?;
+            system_instruction::create_account(
+                &client.payer().pubkey(),
+                &pool_state_kp.pubkey(),
+                lamports,
+                *POOL_STATE_SIZE,
+                pool_program_id,
+            )
+        };
+        let initialize_pool_instr = {
+            let (pool_vault_authority, pool_vault_nonce) =
+                Pubkey::find_program_address(&[&[]], pool_program_id);
+            let pool_asset_mint = mint;
+            let pool_asset_vault = rpc::create_token_account(
+                client.rpc(),
+                pool_asset_mint,
+                &pool_vault_authority,
+                client.payer(),
+            )
+            .map_err(|e| InnerClientError::RawError(e.to_string()))?;
+            let (pool_token_mint, _tx_sig) = rpc::new_mint(
+                client.rpc(),
+                client.payer(),
+                &pool_vault_authority,
+                pool_token_decimals,
+            )
+            .map_err(|e| InnerClientError::RawError(e.to_string()))?;
+            serum_stake::instruction::initialize(
+                pool_program_id,
+                &pool_state_kp.pubkey(),
+                &pool_token_mint.pubkey(),
+                &pool_asset_vault.pubkey(),
+                &pool_vault_authority,
+                &registrar_vault_authority,
+                pool_vault_nonce,
+            )
+        };
+
+        let initialize_registrar_instr = {
+            let accounts = [
+                AccountMeta::new(registrar_kp.pubkey(), false),
+                AccountMeta::new_readonly(srm_vault.pubkey(), false),
+                AccountMeta::new_readonly(msrm_vault.pubkey(), false),
+                AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+            ];
+            serum_registry::instruction::initialize(
+                *client.program(),
+                &accounts,
+                *registrar_authority,
+                nonce,
+                withdrawal_timelock,
+                deactivation_timelock_premium,
+                reward_activation_threshold,
+                pool_state_kp.pubkey(),
+            )
+        };
+
+        vec![
+            create_safe_acc_instr,
+            create_pool_acc_instr,
+            initialize_registrar_instr,
+            initialize_pool_instr,
+        ]
     };
 
     let tx = {
@@ -75,7 +134,7 @@ pub fn initialize(
             .rpc()
             .get_recent_blockhash()
             .map_err(|e| InnerClientError::RawError(e.to_string()))?;
-        let signers = vec![client.payer(), &registrar_kp];
+        let signers = vec![client.payer(), &registrar_kp, &pool_state_kp];
         Transaction::new_signed_with_payer(
             &instructions,
             Some(&client.payer().pubkey()),

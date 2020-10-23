@@ -82,6 +82,7 @@ test-progra%:
 	TEST_DEX_PROGRAM_ID=$(TEST_DEX_PROGRAM_ID) \
 	TEST_REGISTRY_PROGRAM_ID=$(TEST_REGISTRY_PROGRAM_ID) \
 	TEST_LOCKUP_PROGRAM_ID=$(TEST_LOCKUP_PROGRAM_ID) \
+	TEST_STAKE_PROGRAM_ID=$(TEST_STAKE_PROGRAM_ID) \
 	cargo test --features test,client -- --nocapture $(args)
 
 tes%: deplo% test-progra%

@@ -29,6 +29,8 @@ impl Client {
             mint,
             mega_mint,
             reward_activation_threshold,
+            pool_program_id,
+            pool_token_decimals,
         } = req;
         let (tx, registrar, nonce) = inner::initialize(
             &self.inner,
@@ -38,6 +40,8 @@ impl Client {
             withdrawal_timelock,
             deactivation_timelock_premium,
             reward_activation_threshold,
+            &pool_program_id,
+            pool_token_decimals,
         )?;
         Ok(InitializeResponse {
             tx,
@@ -284,6 +288,8 @@ pub struct InitializeRequest {
     pub mint: Pubkey,
     pub mega_mint: Pubkey,
     pub reward_activation_threshold: u64,
+    pub pool_program_id: Pubkey,
+    pub pool_token_decimals: u8,
 }
 
 pub struct InitializeResponse {

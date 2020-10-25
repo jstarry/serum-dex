@@ -34,7 +34,7 @@ fn lifecycle() {
     // Initialize the registrar.
     let withdrawal_timelock = 1234;
     let deactivation_timelock_premium = 1000;
-    let reward_activation_threshold = 10_000_000;
+    let reward_activation_threshold = 10;
     let registrar_authority = Keypair::generate(&mut OsRng);
     let stake_pid: Pubkey = std::env::var("TEST_STAKE_PROGRAM_ID")
         .unwrap()
@@ -305,17 +305,43 @@ fn lifecycle() {
         assert_eq!(l_vault_amount, l_vault.amount);
     }
 
+    // Stake.
+    {
+        let StakeResponse {
+            tx,
+            depositor_pool_token,
+        } = client
+            .stake(StakeRequest {
+                member,
+                beneficiary: &beneficiary,
+                entity,
+                depositor: god.pubkey(),
+                depositor_authority: &god_owner,
+                mega: false,
+                registrar,
+                pool_token_amount: stake_intent_amount,
+                pool_program_id: stake_pid,
+                depositor_pool_token: None,
+            })
+            .unwrap();
+    }
+
     // Stake transfer.
     {
         // todo
     }
 
-    // Stake.
+    // Stake withdrawal.
     {
         // todo
     }
 
-    // Stake withdrawal.
+    // Stake locked.
+    {
+        // todo
+    }
+
+    // Stake withdrawal locked.
     {
         // todo
     }

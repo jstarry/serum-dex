@@ -1,7 +1,7 @@
 use serum_common::pack::Pack;
 use serum_registry::access_control;
 use serum_registry::accounts::entity::{with_entity, WithEntityRequest};
-use serum_registry::accounts::{Entity, Member, Registrar};
+use serum_registry::accounts::{vault, Entity, Member, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::info;
@@ -19,12 +19,11 @@ pub fn handler<'a>(
 
     let acc_infos = &mut accounts.iter();
 
-    // Lockup whitelist relay itnerface.
+    // Lockup whitelist relay interface.
 
     let delegate_owner_acc_info = next_account_info(acc_infos)?;
     let depositor_tok_acc_info = next_account_info(acc_infos)?;
-    // TODO: THE POOL DESTINATION VAULT HERE.
-    let _pool_vault_acc_info = next_account_info(acc_infos)?;
+    let vault_acc_info = next_account_info(acc_infos)?;
     let depositor_tok_owner_acc_info = next_account_info(acc_infos)?;
     let token_program_acc_info = next_account_info(acc_infos)?;
 
@@ -35,8 +34,28 @@ pub fn handler<'a>(
     let entity_acc_info = next_account_info(acc_infos)?;
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
+    let pool_program_id_acc_info = next_account_info(acc_infos)?;
 
-    // TODO: STAKING POOL ACCOUNTS HERE.
+    // Pool interface.
+
+    let pool_acc_info = next_account_info(acc_infos)?;
+    let pool_tok_mint_acc_info = next_account_info(acc_infos)?;
+    let pool_asset_vault_acc_info = next_account_info(acc_infos)?;
+    assert!(vault_acc_info.key == pool_asset_vault_acc_info.key);
+    let pool_vault_authority_acc_info = next_account_info(acc_infos)?;
+    let user_pool_tok_acc_info = next_account_info(acc_infos)?;
+    let user_asset_tok_acc_info = next_account_info(acc_infos)?;
+    assert!(user_asset_tok_acc_info.key == depositor_tok_acc_info.key);
+    let user_tok_auth_acc_info = next_account_info(acc_infos)?;
+    assert!(user_tok_auth_acc_info.key == depositor_tok_owner_acc_info.key);
+
+    // TODO: Must check the user token accounts. If we have a delegate stake
+    //       then all creations/redemptions must go to accounts owned by
+    //       the delegate_owner.
+
+    // TODO: what validation do we need to do here? Ideally, we only check
+    //       the pool address is correct, and the rest is done by the pool
+    //       framework.
 
     with_entity(
         WithEntityRequest {
@@ -72,6 +91,7 @@ pub fn handler<'a>(
                         is_delegate,
                         is_mega,
                         registrar,
+                        registrar_acc_info,
                         clock,
                         depositor_tok_owner_acc_info,
                         depositor_tok_acc_info,
@@ -79,6 +99,14 @@ pub fn handler<'a>(
                         beneficiary_acc_info,
                         entity_acc_info,
                         token_program_acc_info,
+                        pool_program_id_acc_info,
+                        pool_acc_info,
+                        pool_tok_mint_acc_info,
+                        pool_asset_vault_acc_info,
+                        pool_vault_authority_acc_info,
+                        user_pool_tok_acc_info,
+                        user_asset_tok_acc_info,
+                        user_tok_auth_acc_info,
                     })
                     .map_err(Into::into)
                 },
@@ -136,8 +164,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         }
     }
     // Only activated nodes can stake. If this amount puts us over the
-    // activation threshold then allow it, since the node will be activated
-    // once the funds are staked.
+    // activation threshold then allow it.
     if amount + entity.activation_amount() < registrar.reward_activation_threshold {
         return Err(RegistryErrorCode::EntityNotActivated)?;
     }
@@ -163,17 +190,54 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         entity_acc_info,
         token_program_acc_info,
         registrar,
+        registrar_acc_info,
         clock,
+        pool_program_id_acc_info,
+        pool_acc_info,
+        pool_tok_mint_acc_info,
+        pool_asset_vault_acc_info,
+        pool_vault_authority_acc_info,
+        user_pool_tok_acc_info,
+        user_asset_tok_acc_info,
+        user_tok_auth_acc_info,
     } = req;
 
     // Transfer funds into the staking pool, issuing a staking pool token.
     {
-        // todo
+        let instr = serum_stake::instruction::creation(
+            pool_program_id_acc_info.key,
+            pool_acc_info.key,
+            pool_tok_mint_acc_info.key,
+            pool_asset_vault_acc_info.key,
+            pool_vault_authority_acc_info.key,
+            user_pool_tok_acc_info.key,
+            user_asset_tok_acc_info.key,
+            user_tok_auth_acc_info.key,
+            amount,
+        );
+        let signer_seeds = vault::signer_seeds(registrar_acc_info.key, &registrar.nonce);
+        solana_sdk::program::invoke_signed(
+            &instr,
+            &[
+                pool_acc_info.clone(),
+                pool_tok_mint_acc_info.clone(),
+                pool_asset_vault_acc_info.clone(),
+                pool_vault_authority_acc_info.clone(),
+                user_pool_tok_acc_info.clone(),
+                user_asset_tok_acc_info.clone(),
+                user_tok_auth_acc_info.clone(),
+            ],
+            &[&signer_seeds],
+        )?;
     }
 
     // Update accounts for bookeeping.
     {
+        // TODO: the amount here is incorrect. Need to separate the basket
+        //       amount from the pool token amount.
         member.add_stake(amount, is_mega, is_delegate);
+        member.generation = entity.generation;
+
         entity.add_stake(amount, is_mega, &registrar, &clock);
     }
 
@@ -207,10 +271,19 @@ struct StateTransitionRequest<'a, 'b> {
     amount: u64,
     is_mega: bool,
     is_delegate: bool,
+    registrar_acc_info: &'a AccountInfo<'a>,
     depositor_tok_owner_acc_info: &'a AccountInfo<'a>,
     depositor_tok_acc_info: &'a AccountInfo<'a>,
     member_acc_info: &'a AccountInfo<'a>,
     beneficiary_acc_info: &'a AccountInfo<'a>,
     entity_acc_info: &'a AccountInfo<'a>,
     token_program_acc_info: &'a AccountInfo<'a>,
+    pool_program_id_acc_info: &'a AccountInfo<'a>,
+    pool_acc_info: &'a AccountInfo<'a>,
+    pool_tok_mint_acc_info: &'a AccountInfo<'a>,
+    pool_asset_vault_acc_info: &'a AccountInfo<'a>,
+    pool_vault_authority_acc_info: &'a AccountInfo<'a>,
+    user_pool_tok_acc_info: &'a AccountInfo<'a>,
+    user_asset_tok_acc_info: &'a AccountInfo<'a>,
+    user_tok_auth_acc_info: &'a AccountInfo<'a>,
 }

@@ -9,8 +9,6 @@ pub mod access_control;
 pub mod accounts;
 pub mod error;
 
-// TODO: add pool accounts once it's ready.
-
 #[cfg_attr(feature = "client", solana_client_gen)]
 pub mod instruction {
     use super::*;
@@ -108,12 +106,15 @@ pub mod instruction {
         ///
         /// Lockup whitelist relay account interface:
         ///
-        /// 0. `[]`         Member account's delegate owner. If not a delegated
-        ///                 instruction, then a dummy account.
-        /// 1. `[writable]` The depositing token account (sender).
-        /// 2. `[writable]` Vault (receiver).
-        /// 3. `[signer]`   Owner/delegate of the depositing token account.
-        /// 4. `[]`         SPL token program.
+        /// 0. `[]`          Member account's delegate, e.g., the lockup's
+        ///                  program-derived-adddress. If not a delegated
+        ///                  instruction, then a dummy account.
+        /// 1. `[writable]`  The depositing token account (sender).
+        /// 2. `[writable]`  Vault (receiver).
+        /// 3. `[]/[signer]` Delegate/owner of the depositing token account.
+        ///                  If delegate, then the vault authority's
+        ///                  program-derived address.
+        /// 4. `[]`          SPL token program.
         ///
         /// Program specific.
         ///

@@ -28,7 +28,7 @@ pub struct Vesting {
     /// The starting balance of this vesting account, i.e., how much was
     /// originally deposited.
     pub start_balance: u64,
-    /// The ts at which this vesting account was created.
+    /// The unix timestamp at which this vesting account was created.
     pub start_ts: i64,
     /// The ts at which all the tokens associated with this account
     /// should be vested.

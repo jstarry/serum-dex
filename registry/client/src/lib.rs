@@ -218,7 +218,73 @@ impl Client {
     }
 
     pub fn stake(&self, req: StakeRequest) -> Result<StakeResponse, ClientError> {
-        Ok(StakeResponse {})
+        let StakeRequest {
+            member,
+            beneficiary,
+            entity,
+            depositor,
+            depositor_authority,
+            mega,
+            registrar,
+            pool_token_amount,
+            pool_program_id,
+            depositor_pool_token,
+        } = req;
+        let r = self.registrar(&registrar)?;
+        let pool_state = self.stake_pool(&registrar)?;
+        let delegate = false;
+
+        // Create the pool token account (to issue tokens) if none was provided.
+        let depositor_pool_token = {
+            if let Some(dpt) = depositor_pool_token {
+                dpt
+            } else {
+                rpc::create_token_account(
+                    self.rpc(),
+                    &pool_state.pool_token_mint.clone().into(),
+                    &depositor_authority.pubkey(),
+                    self.payer(),
+                )?
+                .pubkey()
+            }
+        };
+
+        let accounts = [
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
+            AccountMeta::new(depositor, false),
+            AccountMeta::new(r.vault, false),
+            AccountMeta::new(depositor_authority.pubkey(), true),
+            AccountMeta::new_readonly(spl_token::ID, false),
+            AccountMeta::new(member, false),
+            AccountMeta::new_readonly(beneficiary.pubkey(), true),
+            AccountMeta::new(entity, false),
+            AccountMeta::new_readonly(registrar, false),
+            AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new_readonly(pool_program_id, false),
+            // Pool interface.
+            AccountMeta::new(r.pool, false),
+            AccountMeta::new(pool_state.pool_token_mint.into(), false),
+            // TODO: validate asset len.
+            AccountMeta::new(pool_state.assets[0].clone().vault_address.into(), false),
+            AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
+            AccountMeta::new(depositor_pool_token, false),
+            AccountMeta::new(depositor, false),
+            AccountMeta::new_readonly(depositor_authority.pubkey(), false),
+        ];
+        let signers = [self.payer(), beneficiary, depositor_authority];
+
+        let tx = self.inner.stake_intent_withdrawal_with_signers(
+            &signers,
+            &accounts,
+            pool_token_amount,
+            mega,
+            delegate,
+        )?;
+
+        Ok(StakeResponse {
+            tx,
+            depositor_pool_token,
+        })
     }
 
     pub fn start_stake_withdrawal(
@@ -371,9 +437,23 @@ pub struct JoinEntityResponse {
     pub member: Pubkey,
 }
 
-pub struct StakeRequest {}
+pub struct StakeRequest<'a> {
+    pub member: Pubkey,
+    pub beneficiary: &'a Keypair,
+    pub entity: Pubkey,
+    pub depositor: Pubkey,
+    pub depositor_authority: &'a Keypair,
+    pub mega: bool,
+    pub registrar: Pubkey,
+    pub pool_token_amount: u64,
+    pub pool_program_id: Pubkey,
+    pub depositor_pool_token: Option<Pubkey>,
+}
 
-pub struct StakeResponse {}
+pub struct StakeResponse {
+    pub tx: Signature,
+    pub depositor_pool_token: Pubkey,
+}
 
 pub struct StakeIntentRequest<'a> {
     pub member: Pubkey,

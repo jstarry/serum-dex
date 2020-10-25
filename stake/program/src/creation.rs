@@ -20,6 +20,7 @@ pub fn handler(
         .as_ref()
         .expect("transact requests have user accounts");
 
+    // Registry authorization.
     assert!(ctx.custom_accounts.len() == 1);
     let admin_acc_info = &ctx.custom_accounts[0];
     if !admin_acc_info.is_signer {

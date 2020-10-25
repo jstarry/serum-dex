@@ -193,6 +193,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
             tok_authority_acc_info.clone(),
             token_program_acc_info.clone(),
         ];
+
         if is_delegate {
             solana_sdk::program::invoke_signed(
                 &withdraw_instruction,

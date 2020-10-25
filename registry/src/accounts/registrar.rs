@@ -40,6 +40,7 @@ pub struct Registrar {
     pub reward_activation_threshold: u64,
     /// Address of the staking pool.
     pub pool: Pubkey,
+    // TODO: add MSRM pool?
 }
 
 impl Registrar {

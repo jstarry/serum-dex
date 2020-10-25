@@ -59,11 +59,14 @@ impl<'a> Whitelist<'a> {
         let start = Whitelist::ITEM_START + index * Whitelist::ITEM_SIZE;
         let new_slice = array_ref![data, start, Whitelist::ITEM_SIZE];
         let (program_id, instance, nonce) = array_refs![&new_slice, 32, 32, 1];
-        Ok(WhitelistEntry::new(
-            Pubkey::new(program_id),
-            Pubkey::new(instance),
-            nonce[0],
-        ))
+        let i = {
+            if instance == &[0; 32] {
+                None
+            } else {
+                Some(Pubkey::new(instance))
+            }
+        };
+        Ok(WhitelistEntry::new(Pubkey::new(program_id), i, nonce[0]))
     }
 
     /// Inserts the given WhitelistEntry at the first available index.
@@ -118,7 +121,11 @@ impl<'a> Whitelist<'a> {
         let dst = array_mut_ref![data, start, Whitelist::ITEM_SIZE];
         let (program_id_dst, instance_dst, nonce) = mut_array_refs![dst, 32, 32, 1];
         program_id_dst.copy_from_slice(item.program_id().as_ref());
-        instance_dst.copy_from_slice(item.instance().as_ref());
+        instance_dst.copy_from_slice(
+            item.instance()
+                .unwrap_or(Pubkey::new_from_array([0; 32]))
+                .as_ref(),
+        );
         nonce[0] = item.nonce();
         Ok(())
     }
@@ -143,12 +150,12 @@ impl<'a> Whitelist<'a> {
 #[derive(Clone, Debug, PartialEq, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct WhitelistEntry {
     program_id: Pubkey,
-    instance: Pubkey,
+    instance: Option<Pubkey>,
     nonce: u8,
 }
 
 impl WhitelistEntry {
-    pub fn new(program_id: Pubkey, instance: Pubkey, nonce: u8) -> Self {
+    pub fn new(program_id: Pubkey, instance: Option<Pubkey>, nonce: u8) -> Self {
         Self {
             program_id,
             instance,
@@ -158,24 +165,33 @@ impl WhitelistEntry {
     pub fn program_id(&self) -> Pubkey {
         self.program_id
     }
-    pub fn instance(&self) -> Pubkey {
+    pub fn instance(&self) -> Option<Pubkey> {
         self.instance
     }
     pub fn nonce(&self) -> u8 {
         self.nonce
     }
     pub fn derived_address(&self) -> Result<Pubkey, LockupError> {
-        Pubkey::create_program_address(
-            &[self.instance().as_ref(), bytemuck::bytes_of(&self.nonce())],
-            &self.program_id(),
-        )
-        .map_err(|_| LockupErrorCode::InvalidWhitelistEntry.into())
+        let pk = {
+            if let Some(i) = self.instance {
+                Pubkey::create_program_address(
+                    &[i.as_ref(), bytemuck::bytes_of(&self.nonce())],
+                    &self.program_id(),
+                )
+            } else {
+                Pubkey::create_program_address(
+                    &[bytemuck::bytes_of(&self.nonce())],
+                    &self.program_id(),
+                )
+            }
+        };
+        pk.map_err(|_| LockupErrorCode::InvalidWhitelistEntry.into())
     }
 
     pub fn zero() -> Self {
         WhitelistEntry {
             program_id: Pubkey::new_from_array([0; 32]),
-            instance: Pubkey::new_from_array([0; 32]),
+            instance: None,
             nonce: 0,
         }
     }

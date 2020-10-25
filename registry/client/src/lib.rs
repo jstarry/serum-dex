@@ -1,4 +1,6 @@
 use serum_common::client::rpc;
+use serum_common::pack::*;
+use serum_pool_schema::PoolState;
 use serum_registry::accounts::{Entity, Member, Registrar, StakeKind};
 use serum_registry::client::{Client as InnerClient, ClientError as InnerClientError};
 use solana_client_gen::prelude::*;
@@ -32,7 +34,7 @@ impl Client {
             pool_program_id,
             pool_token_decimals,
         } = req;
-        let (tx, registrar, nonce) = inner::initialize(
+        let (tx, registrar, nonce, pool, pool_vault_signer_nonce) = inner::initialize(
             &self.inner,
             &mint,
             &mega_mint,
@@ -47,6 +49,8 @@ impl Client {
             tx,
             registrar,
             nonce,
+            pool,
+            pool_vault_signer_nonce,
         })
     }
 
@@ -138,10 +142,6 @@ impl Client {
         Ok(JoinEntityResponse { tx, member })
     }
 
-    pub fn stake(&self, req: StakeRequest) -> Result<StakeResponse, ClientError> {
-        Ok(StakeResponse {})
-    }
-
     pub fn stake_intent(
         &self,
         req: StakeIntentRequest,
@@ -217,6 +217,10 @@ impl Client {
         Ok(StakeIntentWithdrawalResponse { tx })
     }
 
+    pub fn stake(&self, req: StakeRequest) -> Result<StakeResponse, ClientError> {
+        Ok(StakeResponse {})
+    }
+
     pub fn start_stake_withdrawal(
         &self,
         req: StartStakeWithdrawalRequest,
@@ -258,6 +262,24 @@ impl Client {
         let r = self.registrar(registrar)?;
         rpc::get_token_account::<TokenAccount>(self.inner.rpc(), &r.mega_vault).map_err(Into::into)
     }
+
+    pub fn stake_pool(&self, registrar: &Pubkey) -> Result<PoolState, ClientError> {
+        let r = self.registrar(registrar)?;
+        rpc::get_account::<PoolState>(self.inner.rpc(), &r.pool).map_err(Into::into)
+    }
+
+    pub fn stake_pool_asset_vault(&self, registrar: &Pubkey) -> Result<TokenAccount, ClientError> {
+        let pool = self.stake_pool(registrar)?;
+        if pool.assets.len() != 1 {
+            return Err(ClientError::Any(anyhow::anyhow!("invalid asset length")));
+        }
+        rpc::get_token_account::<TokenAccount>(
+            self.inner.rpc(),
+            &pool.assets[0].vault_address.clone().into(),
+        )
+        .map_err(Into::into)
+    }
+    // TODO: MSRM stake pool.
 }
 
 impl ClientGen for Client {
@@ -296,6 +318,8 @@ pub struct InitializeResponse {
     pub tx: Signature,
     pub registrar: Pubkey,
     pub nonce: u8,
+    pub pool: Pubkey,
+    pub pool_vault_signer_nonce: u8,
 }
 
 pub struct RegisterCapabilityRequest<'a> {

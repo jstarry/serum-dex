@@ -3,6 +3,8 @@ use std::{io, io::Write};
 
 use borsh::schema::{Declaration, Definition};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use serum_common::pack::*;
+use solana_sdk::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
 
 /// Wrapper around `solana_sdk::pubkey::Pubkey` so it can implement `BorshSerialize` etc.
@@ -92,6 +94,8 @@ pub struct PoolState {
 
     pub custom_state: Vec<u8>,
 }
+
+serum_common::packable!(PoolState);
 
 #[cfg(not(feature = "program"))]
 lazy_static::lazy_static! {

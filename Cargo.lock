@@ -3097,6 +3097,7 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "lazy_static",
+ "serum-common",
  "solana-sdk",
 ]
 

@@ -124,7 +124,7 @@ pub enum GovCommand {
         program_id: Pubkey,
         /// WhitelistEntry signer-seeds instance.
         #[clap(short, long)]
-        instance: Pubkey,
+        instance: Option<Pubkey>,
         /// WhitelistEntry signer-seeds nonce.
         #[clap(short, long)]
         nonce: u8,
@@ -136,7 +136,7 @@ pub enum GovCommand {
         program_id: Pubkey,
         /// WhitelistEntry signer-seeds instance.
         #[clap(short, long)]
-        instance: Pubkey,
+        instance: Option<Pubkey>,
         /// WhitelistEntry signer-seeds nonce.
         #[clap(short, long)]
         nonce: u8,

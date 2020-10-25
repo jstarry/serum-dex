@@ -105,11 +105,15 @@ pub enum GovCommand {
         #[clap(short, long, default_value = "10000")]
         withdrawal_timelock: i64,
         /// Slots in addition to the withdrawal_timelock for deactivation.
-        #[clap(short, long, default_value = "10000")]
+        #[clap(short = 't', long, default_value = "10000")]
         deactivation_timelock_premium: i64,
         /// SRM equivalent amount required for node activation.
         #[clap(short, long, default_value = "10_000_000")]
         reward_activation_threshold: u64,
+        #[clap(short, long)]
+        pool_program_id: Pubkey,
+        #[clap(short = 'd', long)]
+        pool_token_decimals: u8,
     },
     /// Registers a new node capability in the registrar.
     RegisterCapability {
@@ -226,6 +230,8 @@ pub fn gov_cmd(ctx: &Context, registry_pid: Option<Pubkey>, gov_cmd: GovCommand)
             withdrawal_timelock,
             deactivation_timelock_premium,
             reward_activation_threshold,
+            pool_program_id,
+            pool_token_decimals,
         } => gov::init(
             ctx,
             registry_pid,
@@ -234,6 +240,8 @@ pub fn gov_cmd(ctx: &Context, registry_pid: Option<Pubkey>, gov_cmd: GovCommand)
             withdrawal_timelock,
             deactivation_timelock_premium,
             reward_activation_threshold,
+            pool_program_id,
+            pool_token_decimals,
         ),
         GovCommand::RegisterCapability {
             force_id,
@@ -308,6 +316,8 @@ mod gov {
         withdrawal_timelock: i64,
         deactivation_timelock_premium: i64,
         reward_activation_threshold: u64,
+        pool_program_id: Pubkey,
+        pool_token_decimals: u8,
     ) -> Result<()> {
         let logger = serum_node_logging::get_logger("node/registry");
 
@@ -323,9 +333,7 @@ mod gov {
             }
         };
         let InitializeResponse {
-            tx: _,
-            registrar,
-            nonce: _,
+            registrar, pool, ..
         } = client.initialize(InitializeRequest {
             registrar_authority,
             withdrawal_timelock,
@@ -333,12 +341,15 @@ mod gov {
             mint: ctx.srm_mint,
             mega_mint: ctx.msrm_mint,
             reward_activation_threshold,
+            pool_program_id,
+            pool_token_decimals,
         })?;
 
         info!(
             logger,
             "Registrar initialized with address: {:?}", registrar,
         );
+        info!(logger, "Pool initialized with address: {:?}", pool,);
 
         Ok(())
     }

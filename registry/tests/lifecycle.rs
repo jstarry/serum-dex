@@ -41,7 +41,10 @@ fn lifecycle() {
         .parse()
         .unwrap();
     let InitializeResponse {
-        registrar, nonce, ..
+        registrar,
+        nonce,
+        pool_vault_signer_nonce,
+        ..
     } = client
         .initialize(InitializeRequest {
             registrar_authority: registrar_authority.pubkey(),
@@ -82,7 +85,15 @@ fn lifecycle() {
             .whitelist_add(WhitelistAddRequest {
                 authority: l_client.payer(),
                 safe: init_resp.safe,
-                entry: WhitelistEntry::new(*client.program(), registrar, nonce),
+                entry: WhitelistEntry::new(*client.program(), Some(registrar), nonce),
+            })
+            .unwrap();
+        // Whitelist the staking pool.
+        l_client
+            .whitelist_add(WhitelistAddRequest {
+                authority: l_client.payer(),
+                safe: init_resp.safe,
+                entry: WhitelistEntry::new(stake_pid, None, pool_vault_signer_nonce),
             })
             .unwrap();
         // Create vesting.

@@ -18,7 +18,7 @@ mod redemption;
 
 struct StakeProgram;
 
-impl<'a> Pool<'a> for StakeProgram {
+impl Pool for StakeProgram {
     fn initialize_pool(ctx: &PoolContext, state: &mut PoolState) -> Result<(), ProgramError> {
         initialize_pool::handler(ctx, state).map_err(Into::into)
     }

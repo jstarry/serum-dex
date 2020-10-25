@@ -19,7 +19,7 @@ pub fn initialize(
     reward_activation_threshold: u64,
     pool_program_id: &Pubkey,
     pool_token_decimals: u8,
-) -> Result<(Signature, Pubkey, u8), InnerClientError> {
+) -> Result<(Signature, Pubkey, u8, Pubkey, u8), InnerClientError> {
     let registrar_kp = Keypair::generate(&mut OsRng);
     let (registrar_vault_authority, nonce) =
         Pubkey::find_program_address(&[registrar_kp.pubkey().as_ref()], client.program());
@@ -41,6 +41,8 @@ pub fn initialize(
     .map_err(|e| InnerClientError::RawError(e.to_string()))?;
 
     let pool_state_kp = Keypair::generate(&mut OsRng);
+    let (pool_vault_authority, pool_vault_nonce) =
+        Pubkey::find_program_address(&[&[]], pool_program_id);
 
     // Now build the final transaction.
     let instructions = {
@@ -74,8 +76,6 @@ pub fn initialize(
             )
         };
         let initialize_pool_instr = {
-            let (pool_vault_authority, pool_vault_nonce) =
-                Pubkey::find_program_address(&[&[]], pool_program_id);
             let pool_asset_mint = mint;
             let pool_asset_vault = rpc::create_token_account(
                 client.rpc(),
@@ -152,7 +152,15 @@ pub fn initialize(
             client.options().tx,
         )
         .map_err(InnerClientError::RpcError)
-        .map(|sig| (sig, registrar_kp.pubkey(), nonce))
+        .map(|sig| {
+            (
+                sig,
+                registrar_kp.pubkey(),
+                nonce,
+                pool_state_kp.pubkey(),
+                pool_vault_nonce,
+            )
+        })
 }
 
 pub fn create_entity_derived(

@@ -39,6 +39,7 @@ pub fn handler<'a>(
     Ok(())
 }
 
+#[inline(always)]
 fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), LockupError> {
     info!("access-control: set_authority");
 

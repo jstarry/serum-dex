@@ -43,7 +43,7 @@ pub fn get_basket(
     pool_asset_vault: &Pubkey,
     pool_vault_authority: &Pubkey,
     retbuf: &Pubkey,
-    retbuf_program: &Pubkey,
+    retbuf_pid: &Pubkey,
     spt_amount: u64,
 ) -> Instruction {
     let accounts = vec![
@@ -52,6 +52,7 @@ pub fn get_basket(
         AccountMeta::new(*pool_asset_vault, false),
         AccountMeta::new_readonly(*pool_vault_authority, false),
         AccountMeta::new(*retbuf, false),
+        AccountMeta::new_readonly(*retbuf_pid, false),
     ];
     let req = PoolRequest {
         tag: Default::default(),

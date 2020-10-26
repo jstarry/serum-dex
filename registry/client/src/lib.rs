@@ -1,5 +1,6 @@
 use serum_common::client::rpc;
 use serum_common::pack::*;
+use serum_pool_schema::Basket;
 use serum_pool_schema::PoolState;
 use serum_registry::accounts::{vault, Entity, Member, Registrar, StakeKind};
 use serum_registry::client::{Client as InnerClient, ClientError as InnerClientError};
@@ -248,6 +249,19 @@ impl Client {
                 .pubkey()
             }
         };
+        let retbuf = {
+            let dummy_basket = Basket {
+                quantities: vec![0],
+            };
+            rpc::create_account_rent_exempt(
+                self.rpc(),
+                self.payer(),
+                // First 8 bytes of retbuf is the offset.
+                8 + dummy_basket.size().unwrap() as usize, // todo: don't unwrap
+                &spl_shared_memory::ID,
+            )?
+            .pubkey()
+        };
         // TODO: validate asset len.
         let pool_asset_vault = pool_state.assets[0].clone().vault_address.into();
         let accounts = [
@@ -271,6 +285,8 @@ impl Client {
             AccountMeta::new(depositor_pool_token, false),
             AccountMeta::new(depositor, false),
             AccountMeta::new_readonly(depositor_authority.pubkey(), true),
+            AccountMeta::new(retbuf, false),
+            AccountMeta::new_readonly(spl_shared_memory::ID, false),
         ];
         let signers = [self.payer(), beneficiary, depositor_authority];
 

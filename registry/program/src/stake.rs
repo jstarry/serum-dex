@@ -50,8 +50,8 @@ pub fn handler<'a>(
     assert!(user_asset_tok_acc_info.key == depositor_tok_acc_info.key);
     let user_tok_auth_acc_info = next_account_info(acc_infos)?;
     assert!(user_tok_auth_acc_info.key == depositor_tok_owner_acc_info.key);
-    let retbuf_acc_info = user_tok_auth_acc_info.clone(); //next_account_info(acc_infos)?;
-    let retbuf_program_acc_info = user_tok_auth_acc_info.clone(); //next_account_info(acc_infos)?;
+    let retbuf_acc_info = next_account_info(acc_infos)?;
+    let retbuf_program_acc_info = next_account_info(acc_infos)?;
 
     let pool = PoolApi {
         pool_program_id_acc_info: pool_program_id_acc_info.clone(),
@@ -187,7 +187,6 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-#[inline(always)]
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: stake");
 
@@ -215,7 +214,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 
     // Translate stake token ammount to underlying asset/basket amount.
     info!(&format!("BEFORE_AMOUNT {:?}", amount));
-    let basket_asset_amount = amount; //pool.get_basket(amount)?;
+    let basket_asset_amount = pool.get_basket(amount)?;
     info!(&format!("AFTER_AMOUNT {:?}", basket_asset_amount));
     // Update accounts for bookeeping.
     {
@@ -306,6 +305,7 @@ impl<'a> PoolApi<'a> {
             spt_amount,
         );
         let signer_seeds = vault::signer_seeds(self.registrar_acc_info.key, &registrar_nonce);
+        info!("invoking creation");
         solana_sdk::program::invoke_signed(
             &instr,
             &[
@@ -335,6 +335,7 @@ impl<'a> PoolApi<'a> {
             self.retbuf_program_acc_info.key,
             spt_amount,
         );
+        info!("invoking get_basket");
         solana_sdk::program::invoke(
             &instr,
             &[
@@ -347,7 +348,8 @@ impl<'a> PoolApi<'a> {
                 self.retbuf_program_acc_info,
             ],
         )?;
-        let basket = Basket::unpack(&self.retbuf_acc_info.try_borrow_data()?)?;
+        let data = self.retbuf_acc_info.try_borrow_data()?;
+        let basket = Basket::unpack(&data[8..])?;
         Ok(basket.quantities[0] as u64)
     }
 }

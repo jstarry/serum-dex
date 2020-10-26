@@ -45,25 +45,24 @@ pub fn handler<'a>(
             program_id,
         },
         &mut |entity: &mut Entity, registrar: &Registrar, clock: &Clock| {
+            access_control(AccessControlRequest {
+                depositor_tok_owner_acc_info,
+                depositor_tok_acc_info,
+                member_acc_info,
+                delegate_owner_acc_info,
+                registrar_acc_info,
+                beneficiary_acc_info,
+                entity_acc_info,
+                token_program_acc_info,
+                amount,
+                is_mega,
+                is_delegate,
+                entity,
+                program_id,
+            })?;
             Member::unpack_mut(
                 &mut member_acc_info.try_borrow_mut_data()?,
                 &mut |member: &mut Member| {
-                    access_control(AccessControlRequest {
-                        depositor_tok_owner_acc_info,
-                        depositor_tok_acc_info,
-                        member_acc_info,
-                        delegate_owner_acc_info,
-                        registrar_acc_info,
-                        beneficiary_acc_info,
-                        entity_acc_info,
-                        token_program_acc_info,
-                        amount,
-                        is_mega,
-                        is_delegate,
-                        entity,
-                        member,
-                        program_id,
-                    })?;
                     state_transition(StateTransitionRequest {
                         entity,
                         member,
@@ -103,7 +102,6 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         is_mega,
         is_delegate,
         entity,
-        member,
         program_id,
     } = req;
 
@@ -114,7 +112,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
 
     // Account validation.
     let registrar = access_control::registrar(registrar_acc_info, program_id)?;
-    let _ = access_control::entity(entity_acc_info, registrar_acc_info, program_id)?;
+    access_control::entity_check(entity, entity_acc_info, registrar_acc_info, program_id)?;
     let member = access_control::member(
         member_acc_info,
         entity_acc_info,
@@ -201,7 +199,6 @@ struct AccessControlRequest<'a, 'b> {
     is_delegate: bool,
     amount: u64,
     entity: &'b Entity,
-    member: &'b Member,
     program_id: &'a Pubkey,
 }
 

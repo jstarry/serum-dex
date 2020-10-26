@@ -308,7 +308,7 @@ fn lifecycle() {
     // Stake.
     {
         let StakeResponse {
-            tx,
+            tx: _,
             depositor_pool_token,
         } = client
             .stake(StakeRequest {
@@ -324,6 +324,10 @@ fn lifecycle() {
                 depositor_pool_token: None,
             })
             .unwrap();
+        let user_pool_token: TokenAccount =
+            rpc::get_token_account(client.rpc(), &depositor_pool_token).unwrap();
+        assert_eq!(user_pool_token.amount, stake_intent_amount);
+        assert_eq!(user_pool_token.owner, god_owner.pubkey());
     }
 
     // Stake transfer.

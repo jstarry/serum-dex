@@ -45,6 +45,7 @@ pub fn creation(
     user_pool_token: &Pubkey,
     user_pool_asset_token: &Pubkey,
     user_authority: &Pubkey,
+    registry_signer: &Pubkey,
     amount: u64,
 ) -> Instruction {
     let accounts = vec![
@@ -55,6 +56,9 @@ pub fn creation(
         AccountMeta::new(*user_pool_token, false),
         AccountMeta::new(*user_pool_asset_token, false),
         AccountMeta::new_readonly(*user_authority, true),
+        AccountMeta::new_readonly(spl_token::ID, false),
+        // Program specific accounts.
+        AccountMeta::new_readonly(*registry_signer, true),
     ];
     let req = PoolRequest {
         tag: Default::default(),
@@ -76,6 +80,7 @@ pub fn redemption(
     user_pool_token: &Pubkey,
     user_pool_asset_token: &Pubkey,
     user_authority: &Pubkey,
+    registry_signer: &Pubkey,
     amount: u64,
 ) -> Instruction {
     let accounts = vec![
@@ -86,6 +91,9 @@ pub fn redemption(
         AccountMeta::new(*user_pool_token, false),
         AccountMeta::new(*user_pool_asset_token, false),
         AccountMeta::new_readonly(*user_authority, true),
+        AccountMeta::new_readonly(spl_token::ID, false),
+        // Program specific accounts.
+        AccountMeta::new_readonly(*registry_signer, true),
     ];
     let req = PoolRequest {
         tag: Default::default(),

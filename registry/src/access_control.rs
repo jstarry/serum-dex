@@ -47,19 +47,28 @@ pub fn entity(
     registrar_acc_info: &AccountInfo,
     program_id: &Pubkey,
 ) -> Result<Entity, RegistryError> {
+    let e = Entity::unpack(&acc_info.try_borrow_data()?)?;
+    entity_check(&e, acc_info, registrar_acc_info, program_id)?;
+    Ok(e)
+}
+
+pub fn entity_check(
+    entity: &Entity,
+    acc_info: &AccountInfo,
+    registrar_acc_info: &AccountInfo,
+    program_id: &Pubkey,
+) -> Result<(), RegistryError> {
     if acc_info.owner != program_id {
         return Err(RegistryErrorCode::InvalidAccountOwner)?;
     }
-
-    let e = Entity::unpack(&acc_info.try_borrow_data()?)?;
-    if !e.initialized {
+    if !entity.initialized {
         return Err(RegistryErrorCode::NotInitialized)?;
     }
-    if e.registrar != *registrar_acc_info.key {
+    if entity.registrar != *registrar_acc_info.key {
         return Err(RegistryErrorCode::EntityRegistrarMismatch)?;
     }
 
-    Ok(e)
+    Ok(())
 }
 
 pub fn member(

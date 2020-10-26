@@ -92,10 +92,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             PoolRequestInner::GetBasket(_) => {
                 let retbuf_account = next_account_info(accounts_iter)?;
                 let retbuf_program = next_account_info(accounts_iter)?;
-                context.retbuf = Some(RetbufAccounts::new(
-                    retbuf_account,
-                    retbuf_program,
-                )?);
+                context.retbuf = Some(RetbufAccounts::new(retbuf_account, retbuf_program)?);
                 context.account_params = Some(next_account_infos(
                     accounts_iter,
                     state.account_params.len(),

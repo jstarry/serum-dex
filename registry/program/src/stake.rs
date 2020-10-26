@@ -34,6 +34,7 @@ pub fn handler<'a>(
     let entity_acc_info = next_account_info(acc_infos)?;
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
+    let vault_authority_acc_info = next_account_info(acc_infos)?;
     let pool_program_id_acc_info = next_account_info(acc_infos)?;
 
     // Pool interface.
@@ -65,25 +66,24 @@ pub fn handler<'a>(
             program_id,
         },
         &mut |entity: &mut Entity, registrar: &Registrar, clock: &Clock| {
+            access_control(AccessControlRequest {
+                depositor_tok_owner_acc_info,
+                depositor_tok_acc_info,
+                member_acc_info,
+                registrar_acc_info,
+                delegate_owner_acc_info,
+                beneficiary_acc_info,
+                entity_acc_info,
+                token_program_acc_info,
+                amount,
+                is_mega,
+                is_delegate,
+                entity,
+                program_id,
+            })?;
             Member::unpack_mut(
                 &mut member_acc_info.try_borrow_mut_data()?,
                 &mut |member: &mut Member| {
-                    access_control(AccessControlRequest {
-                        depositor_tok_owner_acc_info,
-                        depositor_tok_acc_info,
-                        member_acc_info,
-                        registrar_acc_info,
-                        delegate_owner_acc_info,
-                        beneficiary_acc_info,
-                        entity_acc_info,
-                        token_program_acc_info,
-                        amount,
-                        is_mega,
-                        is_delegate,
-                        entity,
-                        member,
-                        program_id,
-                    })?;
                     state_transition(StateTransitionRequest {
                         entity,
                         member,
@@ -99,6 +99,7 @@ pub fn handler<'a>(
                         beneficiary_acc_info,
                         entity_acc_info,
                         token_program_acc_info,
+                        vault_authority_acc_info,
                         pool_program_id_acc_info,
                         pool_acc_info,
                         pool_tok_mint_acc_info,
@@ -132,7 +133,6 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         is_mega,
         is_delegate,
         entity,
-        member,
         program_id,
     } = req;
 
@@ -143,7 +143,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
 
     // Account validation.
     let registrar = access_control::registrar(registrar_acc_info, program_id)?;
-    let _ = access_control::entity(entity_acc_info, registrar_acc_info, program_id)?;
+    access_control::entity_check(entity, entity_acc_info, registrar_acc_info, program_id)?;
     let member = access_control::member(
         member_acc_info,
         entity_acc_info,
@@ -200,6 +200,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         user_pool_tok_acc_info,
         user_asset_tok_acc_info,
         user_tok_auth_acc_info,
+        vault_authority_acc_info,
     } = req;
 
     // Transfer funds into the staking pool, issuing a staking pool token.
@@ -213,6 +214,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
             user_pool_tok_acc_info.key,
             user_asset_tok_acc_info.key,
             user_tok_auth_acc_info.key,
+            vault_authority_acc_info.key,
             amount,
         );
         let signer_seeds = vault::signer_seeds(registrar_acc_info.key, &registrar.nonce);
@@ -226,19 +228,35 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
                 user_pool_tok_acc_info.clone(),
                 user_asset_tok_acc_info.clone(),
                 user_tok_auth_acc_info.clone(),
+                token_program_acc_info.clone(),
+                vault_authority_acc_info.clone(),
+                pool_program_id_acc_info.clone(),
             ],
             &[&signer_seeds],
         )?;
     }
 
+    // Translate stake token ammount to underlying asset/basket amount.
+    let basket_asset_amount = {
+        // todo
+        amount
+    };
+
     // Update accounts for bookeeping.
     {
-        // TODO: the amount here is incorrect. Need to separate the basket
-        //       amount from the pool token amount.
-        member.add_stake(amount, is_mega, is_delegate);
+        // TODO: add stake pool token amount to the member and entity.
+        //       Need to translate between pool asset and pool token when
+        //       calculating activation threshold.
+        //
+        //       Probably need to complete get rid of the stake amount field
+        //       adn replace it with the stake token and dynamically loookup
+        //       what the basket is worth on each transaction.
+        //
+        //
+        member.add_stake(basket_asset_amount, is_mega, is_delegate);
         member.generation = entity.generation;
 
-        entity.add_stake(amount, is_mega, &registrar, &clock);
+        entity.add_stake(basket_asset_amount, is_mega, &registrar, &clock);
     }
 
     info!("state-transition: success");
@@ -259,7 +277,6 @@ struct AccessControlRequest<'a, 'b> {
     is_delegate: bool,
     amount: u64,
     entity: &'b Entity,
-    member: &'b Member,
     program_id: &'a Pubkey,
 }
 
@@ -271,6 +288,7 @@ struct StateTransitionRequest<'a, 'b> {
     amount: u64,
     is_mega: bool,
     is_delegate: bool,
+    vault_authority_acc_info: &'a AccountInfo<'a>,
     registrar_acc_info: &'a AccountInfo<'a>,
     depositor_tok_owner_acc_info: &'a AccountInfo<'a>,
     depositor_tok_acc_info: &'a AccountInfo<'a>,

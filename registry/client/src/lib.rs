@@ -1,7 +1,7 @@
 use serum_common::client::rpc;
 use serum_common::pack::*;
 use serum_pool_schema::PoolState;
-use serum_registry::accounts::{Entity, Member, Registrar, StakeKind};
+use serum_registry::accounts::{vault, Entity, Member, Registrar, StakeKind};
 use serum_registry::client::{Client as InnerClient, ClientError as InnerClientError};
 use solana_client_gen::prelude::*;
 use solana_client_gen::solana_sdk::instruction::AccountMeta;
@@ -248,11 +248,12 @@ impl Client {
                 .pubkey()
             }
         };
-
+        // TODO: validate asset len.
+        let pool_asset_vault = pool_state.assets[0].clone().vault_address.into();
         let accounts = [
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
             AccountMeta::new(depositor, false),
-            AccountMeta::new(r.vault, false),
+            AccountMeta::new(pool_asset_vault, false),
             AccountMeta::new(depositor_authority.pubkey(), true),
             AccountMeta::new_readonly(spl_token::ID, false),
             AccountMeta::new(member, false),
@@ -260,20 +261,20 @@ impl Client {
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new_readonly(self.vault_authority(&registrar)?, false),
             AccountMeta::new_readonly(pool_program_id, false),
             // Pool interface.
             AccountMeta::new(r.pool, false),
             AccountMeta::new(pool_state.pool_token_mint.into(), false),
-            // TODO: validate asset len.
-            AccountMeta::new(pool_state.assets[0].clone().vault_address.into(), false),
+            AccountMeta::new(pool_asset_vault, false),
             AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
             AccountMeta::new(depositor_pool_token, false),
             AccountMeta::new(depositor, false),
-            AccountMeta::new_readonly(depositor_authority.pubkey(), false),
+            AccountMeta::new_readonly(depositor_authority.pubkey(), true),
         ];
         let signers = [self.payer(), beneficiary, depositor_authority];
 
-        let tx = self.inner.stake_intent_withdrawal_with_signers(
+        let tx = self.inner.stake_with_signers(
             &signers,
             &accounts,
             pool_token_amount,
@@ -319,6 +320,11 @@ impl Client {
     }
     pub fn member_seed() -> &'static str {
         inner::member_seed()
+    }
+    pub fn vault_authority(&self, registrar: &Pubkey) -> Result<Pubkey, ClientError> {
+        let r = self.registrar(registrar)?;
+        Pubkey::create_program_address(&vault::signer_seeds(registrar, &r.nonce), self.program())
+            .map_err(|e| ClientError::Any(anyhow::anyhow!("invalid vault authority")))
     }
     pub fn stake_intent_vault(&self, registrar: &Pubkey) -> Result<TokenAccount, ClientError> {
         let r = self.registrar(registrar)?;

@@ -2,6 +2,7 @@ use serum_pool::context::{PoolContext, UserAccounts};
 use serum_pool_schema::{Basket, PoolState};
 use serum_stake::error::{StakeError, StakeErrorCode};
 use solana_sdk::account_info::AccountInfo;
+use solana_sdk::info;
 use solana_sdk::program_error::ProgramError;
 use spl_token::instruction as token_instruction;
 use std::convert::TryInto;
@@ -11,6 +12,7 @@ pub fn handler(
     state: &mut PoolState,
     spt_amount: u64,
 ) -> Result<(), StakeError> {
+    info!("handler: creation");
     let &UserAccounts {
         pool_token_account,
         asset_accounts,
@@ -32,27 +34,35 @@ pub fn handler(
     let user_token_acc_info = &asset_accounts[0];
     let pool_token_vault_acc_info = &ctx.pool_vault_accounts[0];
 
-    let Basket { quantities } = ctx.get_simple_basket(spt_amount)?;
-    let asset_amount = quantities[0];
+    let asset_amount: u64 = {
+        if ctx.total_pool_tokens()? == 0 {
+            spt_amount
+        } else {
+            let Basket { quantities } = ctx.get_simple_basket(spt_amount)?;
+            quantities[0]
+                .try_into()
+                .map_err(|_| StakeErrorCode::InvalidU64)?
+        }
+    };
 
     // Transfer `amount` of the state.assets[0] into the pool's vault.
     {
+        info!("invoking token transfer");
         let transfer_instr = token_instruction::transfer(
             &spl_token::ID,
             user_token_acc_info.key,
             pool_token_vault_acc_info.key,
-            ctx.pool_authority.key,
+            authority.key,
             &[],
-            asset_amount
-                .try_into()
-                .map_err(|_| StakeErrorCode::InvalidU64)?,
+            asset_amount,
         )?;
         solana_sdk::program::invoke_signed(
             &transfer_instr,
             &[
                 user_token_acc_info.clone(),
                 pool_token_vault_acc_info.clone(),
-                ctx.pool_authority.clone(),
+                authority.clone(),
+                ctx.spl_token_program.expect("must be provided").clone(),
             ],
             &[],
         )?;
@@ -66,9 +76,7 @@ pub fn handler(
             pool_token_account.key,
             ctx.pool_authority.key,
             &[],
-            asset_amount
-                .try_into()
-                .map_err(|_| StakeErrorCode::InvalidU64)?,
+            asset_amount,
         )?;
         solana_sdk::program::invoke_signed(
             &mint_tokens_instr,
@@ -76,6 +84,7 @@ pub fn handler(
                 ctx.pool_token_mint.clone(),
                 pool_token_account.clone(),
                 ctx.pool_authority.clone(),
+                ctx.spl_token_program.expect("must be provided").clone(),
             ],
             &[&[&[state.vault_signer_nonce]]],
         )?;

@@ -5,7 +5,7 @@
 use serum_common::pack::Pack;
 use serum_pool::context::PoolContext;
 use serum_pool::pool::Pool;
-use serum_pool_schema::PoolState;
+use serum_pool_schema::{Basket, PoolState};
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::entrypoint::ProgramResult;
 use solana_sdk::info;
@@ -13,6 +13,7 @@ use solana_sdk::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
 
 mod creation;
+mod get_basket;
 mod initialize_pool;
 mod redemption;
 
@@ -37,6 +38,22 @@ impl Pool for StakeProgram {
         spt_amount: u64,
     ) -> Result<(), ProgramError> {
         redemption::handler(ctx, state, spt_amount).map_err(Into::into)
+    }
+
+    fn get_creation_basket(
+        ctx: &PoolContext,
+        state: &PoolState,
+        request: u64,
+    ) -> Result<Basket, ProgramError> {
+        get_basket::handler(ctx, state, request).map_err(Into::into)
+    }
+
+    fn get_redemption_basket(
+        ctx: &PoolContext,
+        state: &PoolState,
+        request: u64,
+    ) -> Result<Basket, ProgramError> {
+        get_basket::handler(ctx, state, request).map_err(Into::into)
     }
 }
 

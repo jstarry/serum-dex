@@ -22,6 +22,7 @@ spl-token = { version = "2.0.6", default-features = false }
 serum-registry = { path = "../" }
 serum-common = { path = "../../common", features = ["program"] }
 serum-stake = { path = "../../stake", features = ["program"] }
+serum-pool-schema = { path = "../../pool/schema", default-features = false, features = ["program"] }
 
 [profile.release]
 lto = true

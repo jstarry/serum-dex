@@ -4,6 +4,7 @@ use serum_stake::error::{StakeError, StakeErrorCode};
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::info;
 use solana_sdk::program_error::ProgramError;
+use solana_sdk::pubkey::Pubkey;
 use spl_token::instruction as token_instruction;
 use std::convert::TryInto;
 
@@ -26,6 +27,10 @@ pub fn handler(
     assert!(ctx.custom_accounts.len() == 1);
     let admin_acc_info = &ctx.custom_accounts[0];
     if !admin_acc_info.is_signer {
+        return Err(StakeErrorCode::Unauthorized)?;
+    }
+    let expected_admin: Pubkey = state.admin_key.clone().expect("had admin key").into();
+    if expected_admin != *admin_acc_info.key {
         return Err(StakeErrorCode::Unauthorized)?;
     }
 

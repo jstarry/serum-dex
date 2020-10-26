@@ -1,4 +1,5 @@
 use serum_common::pack::Pack;
+use serum_pool_schema::Basket;
 use serum_registry::access_control;
 use serum_registry::accounts::entity::{with_entity, WithEntityRequest};
 use serum_registry::accounts::{vault, Entity, Member, Registrar};
@@ -49,6 +50,24 @@ pub fn handler<'a>(
     assert!(user_asset_tok_acc_info.key == depositor_tok_acc_info.key);
     let user_tok_auth_acc_info = next_account_info(acc_infos)?;
     assert!(user_tok_auth_acc_info.key == depositor_tok_owner_acc_info.key);
+    let retbuf_acc_info = user_tok_auth_acc_info.clone(); //next_account_info(acc_infos)?;
+    let retbuf_program_acc_info = user_tok_auth_acc_info.clone(); //next_account_info(acc_infos)?;
+
+    let pool = PoolApi {
+        pool_program_id_acc_info: pool_program_id_acc_info.clone(),
+        pool_acc_info: pool_acc_info.clone(),
+        pool_tok_mint_acc_info: pool_tok_mint_acc_info.clone(),
+        pool_asset_vault_acc_info: pool_asset_vault_acc_info.clone(),
+        pool_vault_authority_acc_info: pool_vault_authority_acc_info.clone(),
+        user_pool_tok_acc_info: user_pool_tok_acc_info.clone(),
+        user_asset_tok_acc_info: user_asset_tok_acc_info.clone(),
+        user_tok_auth_acc_info: user_tok_auth_acc_info.clone(),
+        vault_authority_acc_info: vault_authority_acc_info.clone(),
+        registrar_acc_info: registrar_acc_info.clone(),
+        token_program_acc_info: token_program_acc_info.clone(),
+        retbuf_acc_info: retbuf_acc_info.clone(),
+        retbuf_program_acc_info: retbuf_program_acc_info.clone(),
+    };
 
     // TODO: Must check the user token accounts. If we have a delegate stake
     //       then all creations/redemptions must go to accounts owned by
@@ -100,14 +119,7 @@ pub fn handler<'a>(
                         entity_acc_info,
                         token_program_acc_info,
                         vault_authority_acc_info,
-                        pool_program_id_acc_info,
-                        pool_acc_info,
-                        pool_tok_mint_acc_info,
-                        pool_asset_vault_acc_info,
-                        pool_vault_authority_acc_info,
-                        user_pool_tok_acc_info,
-                        user_asset_tok_acc_info,
-                        user_tok_auth_acc_info,
+                        pool: pool.clone(),
                     })
                     .map_err(Into::into)
                 },
@@ -117,6 +129,7 @@ pub fn handler<'a>(
     )
 }
 
+#[inline(always)]
 fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     info!("access-control: stake");
 
@@ -174,6 +187,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
+#[inline(always)]
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: stake");
 
@@ -192,56 +206,17 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         registrar,
         registrar_acc_info,
         clock,
-        pool_program_id_acc_info,
-        pool_acc_info,
-        pool_tok_mint_acc_info,
-        pool_asset_vault_acc_info,
-        pool_vault_authority_acc_info,
-        user_pool_tok_acc_info,
-        user_asset_tok_acc_info,
-        user_tok_auth_acc_info,
         vault_authority_acc_info,
+        pool,
     } = req;
 
     // Transfer funds into the staking pool, issuing a staking pool token.
-    {
-        let instr = serum_stake::instruction::creation(
-            pool_program_id_acc_info.key,
-            pool_acc_info.key,
-            pool_tok_mint_acc_info.key,
-            pool_asset_vault_acc_info.key,
-            pool_vault_authority_acc_info.key,
-            user_pool_tok_acc_info.key,
-            user_asset_tok_acc_info.key,
-            user_tok_auth_acc_info.key,
-            vault_authority_acc_info.key,
-            amount,
-        );
-        let signer_seeds = vault::signer_seeds(registrar_acc_info.key, &registrar.nonce);
-        solana_sdk::program::invoke_signed(
-            &instr,
-            &[
-                pool_acc_info.clone(),
-                pool_tok_mint_acc_info.clone(),
-                pool_asset_vault_acc_info.clone(),
-                pool_vault_authority_acc_info.clone(),
-                user_pool_tok_acc_info.clone(),
-                user_asset_tok_acc_info.clone(),
-                user_tok_auth_acc_info.clone(),
-                token_program_acc_info.clone(),
-                vault_authority_acc_info.clone(),
-                pool_program_id_acc_info.clone(),
-            ],
-            &[&signer_seeds],
-        )?;
-    }
+    pool.create(amount, registrar.nonce);
 
     // Translate stake token ammount to underlying asset/basket amount.
-    let basket_asset_amount = {
-        // todo
-        amount
-    };
-
+    info!(&format!("BEFORE_AMOUNT {:?}", amount));
+    let basket_asset_amount = amount; //pool.get_basket(amount)?;
+    info!(&format!("AFTER_AMOUNT {:?}", basket_asset_amount));
     // Update accounts for bookeeping.
     {
         // TODO: add stake pool token amount to the member and entity.
@@ -296,12 +271,83 @@ struct StateTransitionRequest<'a, 'b> {
     beneficiary_acc_info: &'a AccountInfo<'a>,
     entity_acc_info: &'a AccountInfo<'a>,
     token_program_acc_info: &'a AccountInfo<'a>,
-    pool_program_id_acc_info: &'a AccountInfo<'a>,
-    pool_acc_info: &'a AccountInfo<'a>,
-    pool_tok_mint_acc_info: &'a AccountInfo<'a>,
-    pool_asset_vault_acc_info: &'a AccountInfo<'a>,
-    pool_vault_authority_acc_info: &'a AccountInfo<'a>,
-    user_pool_tok_acc_info: &'a AccountInfo<'a>,
-    user_asset_tok_acc_info: &'a AccountInfo<'a>,
-    user_tok_auth_acc_info: &'a AccountInfo<'a>,
+    pool: PoolApi<'a>,
+}
+
+#[derive(Clone)]
+struct PoolApi<'a> {
+    pub pool_acc_info: AccountInfo<'a>,
+    pub pool_tok_mint_acc_info: AccountInfo<'a>,
+    pub pool_asset_vault_acc_info: AccountInfo<'a>,
+    pub pool_vault_authority_acc_info: AccountInfo<'a>,
+    pub user_pool_tok_acc_info: AccountInfo<'a>,
+    pub user_asset_tok_acc_info: AccountInfo<'a>,
+    pub user_tok_auth_acc_info: AccountInfo<'a>,
+    pub token_program_acc_info: AccountInfo<'a>,
+    pub vault_authority_acc_info: AccountInfo<'a>,
+    pub pool_program_id_acc_info: AccountInfo<'a>,
+    pub registrar_acc_info: AccountInfo<'a>,
+    pub retbuf_acc_info: AccountInfo<'a>,
+    pub retbuf_program_acc_info: AccountInfo<'a>,
+}
+
+impl<'a> PoolApi<'a> {
+    pub fn create(&self, spt_amount: u64, registrar_nonce: u8) -> Result<(), RegistryError> {
+        let instr = serum_stake::instruction::creation(
+            self.pool_program_id_acc_info.key,
+            self.pool_acc_info.key,
+            self.pool_tok_mint_acc_info.key,
+            self.pool_asset_vault_acc_info.key,
+            self.pool_vault_authority_acc_info.key,
+            self.user_pool_tok_acc_info.key,
+            self.user_asset_tok_acc_info.key,
+            self.user_tok_auth_acc_info.key,
+            self.vault_authority_acc_info.key,
+            spt_amount,
+        );
+        let signer_seeds = vault::signer_seeds(self.registrar_acc_info.key, &registrar_nonce);
+        solana_sdk::program::invoke_signed(
+            &instr,
+            &[
+                self.pool_acc_info.clone(),
+                self.pool_tok_mint_acc_info.clone(),
+                self.pool_asset_vault_acc_info.clone(),
+                self.pool_vault_authority_acc_info.clone(),
+                self.user_pool_tok_acc_info.clone(),
+                self.user_asset_tok_acc_info.clone(),
+                self.user_tok_auth_acc_info.clone(),
+                self.token_program_acc_info.clone(),
+                self.vault_authority_acc_info.clone(),
+                self.pool_program_id_acc_info.clone(),
+            ],
+            &[&signer_seeds],
+        )?;
+        Ok(())
+    }
+    pub fn get_basket(self, spt_amount: u64) -> Result<u64, RegistryError> {
+        let instr = serum_stake::instruction::get_basket(
+            self.pool_program_id_acc_info.key,
+            self.pool_acc_info.key,
+            self.pool_tok_mint_acc_info.key,
+            self.pool_asset_vault_acc_info.key,
+            self.pool_vault_authority_acc_info.key,
+            self.retbuf_acc_info.key,
+            self.retbuf_program_acc_info.key,
+            spt_amount,
+        );
+        solana_sdk::program::invoke(
+            &instr,
+            &[
+                self.pool_program_id_acc_info,
+                self.pool_acc_info,
+                self.pool_tok_mint_acc_info,
+                self.pool_asset_vault_acc_info,
+                self.pool_vault_authority_acc_info,
+                self.retbuf_acc_info.clone(),
+                self.retbuf_program_acc_info,
+            ],
+        )?;
+        let basket = Basket::unpack(&self.retbuf_acc_info.try_borrow_data()?)?;
+        Ok(basket.quantities[0] as u64)
+    }
 }

@@ -24,6 +24,7 @@ serum-stake = { path = "../" }
 serum-common = { path = "../../common", features = ["program"] }
 serum-pool = { path = "../../pool", default-features = false, features = ["program"] }
 serum-pool-schema = { path = "../../pool/schema", default-features = false, features = ["program"] }
+borsh = { git = "https://github.com/project-serum/borsh", branch = "serum" }
 
 [profile.release]
 lto = true

@@ -203,6 +203,8 @@ pub struct Basket {
     pub quantities: Vec<i64>,
 }
 
+serum_common::packable!(Basket);
+
 impl BorshSerialize for Address {
     fn serialize<W: Write>(&self, writer: &mut W) -> io::Result<()> {
         BorshSerialize::serialize(&self.0.to_bytes(), writer)

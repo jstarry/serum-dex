@@ -348,8 +348,7 @@ impl<'a> PoolApi<'a> {
                 self.retbuf_program_acc_info,
             ],
         )?;
-        let data = self.retbuf_acc_info.try_borrow_data()?;
-        let basket = Basket::unpack(&data[8..])?;
+        let basket = Basket::unpack(&self.retbuf_acc_info.try_borrow_data()?)?;
         Ok(basket.quantities[0] as u64)
     }
 }

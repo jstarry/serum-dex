@@ -29,7 +29,6 @@ pub fn handler(
     let offset: usize = 0;
     let mut data = offset.to_le_bytes().to_vec();
     data.append(&mut basket.try_to_vec().expect("basket must serialize"));
-
     let instr = Instruction {
         program_id: *retbuf_accs.program.key,
         accounts: vec![AccountMeta::new(*retbuf_accs.account.key, false)],
@@ -40,6 +39,5 @@ pub fn handler(
         &instr,
         &[retbuf_accs.account.clone(), retbuf_accs.program.clone()],
     )?;
-    info!("retbuf success");
     Ok(basket)
 }

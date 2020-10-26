@@ -256,8 +256,7 @@ impl Client {
             rpc::create_account_rent_exempt(
                 self.rpc(),
                 self.payer(),
-                // First 8 bytes of retbuf is the offset.
-                8 + dummy_basket.size().unwrap() as usize, // todo: don't unwrap
+                dummy_basket.size().expect("always serializes") as usize,
                 &spl_shared_memory::ID,
             )?
             .pubkey()

@@ -10,7 +10,7 @@ use serum_lockup_test_stake::instruction::StakeInstruction;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::entrypoint::ProgramResult;
 #[cfg(feature = "program")]
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
 
 #[cfg(feature = "program")]

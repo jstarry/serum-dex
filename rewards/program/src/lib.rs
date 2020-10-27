@@ -5,7 +5,7 @@ use serum_rewards::error::{RewardsError, RewardsErrorCode};
 use serum_rewards::instruction::RewardsInstruction;
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::entrypoint::ProgramResult;
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
 
 pub(crate) mod access_control;

@@ -8,7 +8,7 @@ use serum_pool::pool::Pool;
 use serum_pool_schema::{Basket, PoolState};
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::entrypoint::ProgramResult;
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
 

@@ -25,6 +25,7 @@ serum-rewards = { path = "../" }
 serum-registry = { path = "../../registry" }
 serum-common = { path = "../../common", features = ["program"] }
 serum_dex = { path = "../../dex" }
+solana-program = "1.4.3"
 
 [profile.release]
 lto = true

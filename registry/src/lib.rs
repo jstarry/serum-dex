@@ -35,8 +35,9 @@ pub mod instruction {
             /// The amount of tokens that must be staked for an entity to be
             /// eligible for rewards.
             reward_activation_threshold: u64,
-            /// Address of the staking pool.
+            /// Address of the SRM staking pool.
             pool: Pubkey,
+            /// Address of the MSRM staking pool.
             mega_pool: Pubkey,
         },
         /// RegisterCapability registers a node capability for reward
@@ -63,28 +64,26 @@ pub mod instruction {
         /// 2. `[]`         Registrar.
         /// 3. `[]`         Rent sysvar.
         CreateEntity {
-            /// The Serum ecosystem duties a Node performs to earn extra
-            /// performance based rewards, for example, cranking.
-            capabilities: u32,
             /// Type of governance backing the `Entity`.
             stake_kind: accounts::StakeKind,
         },
-        /// UpdateEntity updates the leader and capabilities of the node entity.
+        /// UpdateEntity updates the leader of the node entity.
         ///
         /// Accounts:
         ///
         /// 0. `[writable]` Entity account.
         /// 1. `[signer]`   Leader of the entity.
-        UpdateEntity { leader: Pubkey, capabilities: u32 },
+        /// 2. `[]`         Registrar.
+        UpdateEntity { leader: Pubkey },
         /// Joins the entity by creating a membership account.
         ///
         /// Accounts:
         ///
         /// 0. `[writable]` Member account being created.
-        /// 1. `[]`         Entity account to stake to.
+        /// 1. `[]`         Entity to join.
         /// 2. `[]`         Registrar.
         /// 3. `[]`         Rent sysvar.
-        JoinEntity {
+        CreateMember {
             /// The owner of this entity account. Must sign off when staking and
             /// withdrawing.
             beneficiary: Pubkey,
@@ -103,6 +102,16 @@ pub mod instruction {
             /// Delegate can only be updated if the delegate's book balance is 0.
             delegate: Option<Pubkey>,
         },
+        /// Accounts:
+        ///
+        /// 0. `[writable]` Member account.
+        /// 1. `[signed]`   Beneficiary of the member account.
+        /// 2. `[]`         Registrar.
+        /// 3. `[writable]` Current entity of the member.
+        /// 4. `[writable]` New entity of the member.
+        /// 5. `[]`         Clock sysvar.
+        /// ..              Pool accounts. SRM pool must be before MSRM pool.
+        SwitchEntity,
         /// Accounts:
         ///
         /// Lockup whitelist relay account interface:

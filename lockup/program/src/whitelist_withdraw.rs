@@ -3,7 +3,7 @@ use serum_common::pack::Pack;
 use serum_lockup::accounts::{Safe, TokenVault, Vesting};
 use serum_lockup::error::{LockupError, LockupErrorCode};
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::program_pack::Pack as TokenPack;
 use solana_sdk::pubkey::Pubkey;

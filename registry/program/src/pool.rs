@@ -3,8 +3,8 @@ use serum_pool_schema::{Basket, PoolState};
 use serum_registry::accounts::entity::StakeContext;
 use serum_registry::accounts::vault;
 use serum_registry::error::RegistryError;
+use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
 
 // Methods here assume the proper validation has been done prior to constructing
 // the context.
@@ -105,14 +105,15 @@ pub enum PoolConfig<'a, 'b> {
         registrar_acc_info: &'a AccountInfo<'b>,
         token_program_acc_info: &'a AccountInfo<'b>,
     },
+    SwitchEntity,
     TransferStakeIntent,
 }
 
-pub fn parse_pools<'a, 'b>(
+pub fn parse_accounts<'a, 'b>(
     cfg: PoolConfig<'a, 'b>,
     mut acc_infos: &mut dyn std::iter::Iterator<Item = &'a AccountInfo<'b>>,
     is_mega: bool,
-) -> Result<(PoolApi<'a, 'b>, PoolApi<'a, 'b>), RegistryError> {
+) -> Result<(StakeContext, PoolApi<'a, 'b>, PoolApi<'a, 'b>), RegistryError> {
     let acc_infos = &mut acc_infos;
 
     // Program ids.
@@ -196,5 +197,7 @@ pub fn parse_pools<'a, 'b>(
         }
     };
 
-    Ok((pool, mega_pool))
+    let stake_ctx = StakeContext::new(pool.get_basket(1)?, mega_pool.get_basket(1)?);
+
+    Ok((stake_ctx, pool, mega_pool))
 }

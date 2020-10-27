@@ -7,7 +7,7 @@ use serum_lockup::error::{LockupError, LockupErrorCode};
 use serum_lockup::instruction::LockupInstruction;
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::entrypoint::ProgramResult;
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
 
 pub(crate) mod access_control;

@@ -229,7 +229,6 @@ pub fn create_entity_derived(
     client: &InnerClient,
     registrar: Pubkey,
     leader_kp: &Keypair,
-    capabilities: u32,
     stake_kind: serum_registry::accounts::StakeKind,
 ) -> Result<(Signature, Pubkey), InnerClientError> {
     let entity_account_size = *serum_registry::accounts::entity::SIZE;
@@ -254,12 +253,8 @@ pub fn create_entity_derived(
         AccountMeta::new_readonly(registrar, false),
         AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false),
     ];
-    let create_entity_instr = serum_registry::instruction::create_entity(
-        *client.program(),
-        &accounts,
-        capabilities,
-        stake_kind,
-    );
+    let create_entity_instr =
+        serum_registry::instruction::create_entity(*client.program(), &accounts, stake_kind);
     let instructions = [create_acc_instr, create_entity_instr];
     let signers = [leader_kp, client.payer()];
     let (recent_hash, _fee_calc) = client.rpc().get_recent_blockhash()?;
@@ -282,7 +277,7 @@ pub fn create_entity_derived(
         .map(|sig| (sig, entity_address))
 }
 
-pub fn join_entity_derived(
+pub fn create_member_derived(
     client: &InnerClient,
     registrar: Pubkey,
     entity: Pubkey,
@@ -314,7 +309,7 @@ pub fn join_entity_derived(
         AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false),
     ];
 
-    let member_instr = serum_registry::instruction::join_entity(
+    let member_instr = serum_registry::instruction::create_member(
         *client.program(),
         &accounts,
         beneficiary,

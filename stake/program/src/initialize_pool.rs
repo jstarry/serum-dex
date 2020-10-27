@@ -2,7 +2,7 @@ use serum_pool::context::PoolContext;
 use serum_pool_schema::PoolState;
 use serum_stake::error::StakeError;
 use solana_sdk::account_info::next_account_info;
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::program_error::ProgramError;
 
 pub fn handler(ctx: &PoolContext, state: &mut PoolState) -> Result<(), StakeError> {

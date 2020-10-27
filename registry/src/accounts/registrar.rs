@@ -36,10 +36,12 @@ pub struct Registrar {
     pub vault: Pubkey,
     /// Vault holding stake-intent mega tokens.
     pub mega_vault: Pubkey,
-    /// The amount of tokens that must be deposited to be eligible for rewards.
+    /// The amount of tokens that must be deposited to be eligible for rewards,
+    /// denominated in SRM.
     pub reward_activation_threshold: u64,
-    /// Address of the staking pool.
+    /// Address of the SRM staking pool.
     pub pool: Pubkey,
+    /// Address of the MSRM staking pool.
     pub mega_pool: Pubkey,
 }
 

@@ -2,14 +2,13 @@ use serum_common::pack::Pack;
 use serum_registry::access_control;
 use serum_registry::accounts::{Entity, EntityState, StakeKind};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
+use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
 use solana_sdk::pubkey::Pubkey;
 
 pub fn handler<'a>(
     program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
-    capabilities: u32,
     stake_kind: StakeKind,
 ) -> Result<(), RegistryError> {
     info!("handler: create_entity");
@@ -36,7 +35,6 @@ pub fn handler<'a>(
             state_transition(StateTransitionRequest {
                 leader: entity_leader_acc_info.key,
                 entity,
-                capabilities,
                 stake_kind,
                 registrar_acc_info,
             })
@@ -93,7 +91,6 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     let StateTransitionRequest {
         entity,
         leader,
-        capabilities,
         stake_kind,
         registrar_acc_info,
     } = req;
@@ -101,7 +98,6 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     entity.initialized = true;
     entity.registrar = *registrar_acc_info.key;
     entity.generation = 0;
-    entity.capabilities = capabilities;
     entity.stake_kind = stake_kind;
     entity.leader = *leader;
     entity.balances = Default::default();
@@ -124,7 +120,6 @@ struct AccessControlRequest<'a> {
 struct StateTransitionRequest<'a, 'b> {
     entity: &'b mut Entity,
     leader: &'a Pubkey,
-    capabilities: u32,
     stake_kind: StakeKind,
     registrar_acc_info: &'a AccountInfo<'a>,
 }

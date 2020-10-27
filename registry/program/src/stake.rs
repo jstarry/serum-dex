@@ -1,13 +1,13 @@
 use crate::entity::{with_entity, WithEntityRequest};
-use crate::pool::{parse_pools, PoolApi, PoolConfig};
+use crate::pool::{self, PoolApi, PoolConfig};
 use serum_common::pack::Pack;
 use serum_pool_schema::Basket;
 use serum_registry::access_control;
 use serum_registry::accounts::entity::StakeContext;
 use serum_registry::accounts::{vault, Entity, Member, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
+use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::sysvar::clock::Clock;
 
@@ -42,13 +42,13 @@ pub fn handler<'a>(
     let vault_authority_acc_info = next_account_info(acc_infos)?;
 
     // Pool accounts.
-    let (pool, mega_pool) = {
+    let (stake_ctx, pool, mega_pool) = {
         let cfg = PoolConfig::Stake {
             vault_authority_acc_info,
             registrar_acc_info,
             token_program_acc_info,
         };
-        parse_pools(cfg, acc_infos, is_mega)?
+        pool::parse_accounts(cfg, acc_infos, is_mega)?
     };
 
     // TODO: Must check the user token accounts. If we have a delegate stake
@@ -65,13 +65,9 @@ pub fn handler<'a>(
             registrar: registrar_acc_info,
             clock: clock_acc_info,
             program_id,
-            pool: &pool,
-            mega_pool: &mega_pool,
+            stake_ctx: &stake_ctx,
         },
-        &mut |entity: &mut Entity,
-              stake_ctx: &StakeContext,
-              registrar: &Registrar,
-              clock: &Clock| {
+        &mut |entity: &mut Entity, registrar: &Registrar, clock: &Clock| {
             access_control(AccessControlRequest {
                 depositor_tok_owner_acc_info,
                 depositor_tok_acc_info,
@@ -86,7 +82,7 @@ pub fn handler<'a>(
                 is_delegate,
                 entity,
                 program_id,
-                stake_ctx,
+                stake_ctx: &stake_ctx,
             })?;
             Member::unpack_mut(
                 &mut member_acc_info.try_borrow_mut_data()?,
@@ -100,7 +96,7 @@ pub fn handler<'a>(
                         registrar,
                         clock,
                         pool: pool.clone(),
-                        stake_ctx,
+                        stake_ctx: &stake_ctx,
                     })
                     .map_err(Into::into)
                 },

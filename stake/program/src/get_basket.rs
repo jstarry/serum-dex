@@ -2,7 +2,7 @@ use borsh::BorshSerialize;
 use serum_pool::context::PoolContext;
 use serum_pool_schema::{Basket, PoolState};
 use serum_stake::error::StakeError;
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 
 pub fn handler(

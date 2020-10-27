@@ -2,7 +2,7 @@ use crate::access_control;
 use serum_lockup::accounts::{Whitelist, WhitelistEntry};
 use serum_lockup::error::{LockupError, LockupErrorCode};
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
 
 pub fn handler<'a>(

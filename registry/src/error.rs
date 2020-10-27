@@ -38,6 +38,8 @@ pub enum RegistryErrorCode {
     InsufficientStakeIntentBalance = 23,
     InvalidMemberDelegateOwner = 24,
     InvalidTokenAuthority = 25,
+    EntityLeaderMismatch = 26,
+    EntityMemberMismatch = 27,
     Unknown = 1000,
 }
 

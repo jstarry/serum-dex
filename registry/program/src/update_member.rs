@@ -1,8 +1,9 @@
+use crate::entity::{with_entity, WithEntityRequest};
 use serum_common::pack::*;
 use serum_registry::accounts::{Member, Watchtower};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
+use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
 use solana_sdk::pubkey::Pubkey;
 use std::convert::Into;
 
@@ -53,7 +54,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     } = req;
 
     // Beneficiary authorization.
-    if !member_acc_info.is_signer {
+    if !beneficiary_acc_info.is_signer {
         return Err(RegistryErrorCode::Unauthorized)?;
     }
 
@@ -82,8 +83,6 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
 }
 
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
-    // todo
-
     info!("state-transition: update_member");
 
     let StateTransitionRequest {

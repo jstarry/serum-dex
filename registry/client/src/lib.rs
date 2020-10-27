@@ -95,17 +95,11 @@ impl Client {
     ) -> Result<CreateEntityResponse, ClientError> {
         let CreateEntityRequest {
             node_leader,
-            capabilities,
             stake_kind,
             registrar,
         } = req;
-        let (tx, entity) = inner::create_entity_derived(
-            &self.inner,
-            registrar,
-            node_leader,
-            capabilities,
-            stake_kind,
-        )?;
+        let (tx, entity) =
+            inner::create_entity_derived(&self.inner, registrar, node_leader, stake_kind)?;
         Ok(CreateEntityResponse { tx, entity })
     }
 
@@ -117,23 +111,26 @@ impl Client {
             entity,
             leader,
             new_leader,
-            new_capabilities,
+            registrar,
         } = req;
         let accounts = [
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(leader.pubkey(), true),
+            AccountMeta::new_readonly(registrar, false),
         ];
         let tx = self.inner.update_entity_with_signers(
             &[leader, self.payer()],
             &accounts,
             new_leader,
-            new_capabilities,
         )?;
         Ok(UpdateEntityResponse { tx })
     }
 
-    pub fn join_entity(&self, req: JoinEntityRequest) -> Result<JoinEntityResponse, ClientError> {
-        let JoinEntityRequest {
+    pub fn create_member(
+        &self,
+        req: CreateMemberRequest,
+    ) -> Result<CreateMemberResponse, ClientError> {
+        let CreateMemberRequest {
             entity,
             beneficiary,
             delegate,
@@ -141,7 +138,7 @@ impl Client {
             watchtower,
             watchtower_dest,
         } = req;
-        let (tx, member) = inner::join_entity_derived(
+        let (tx, member) = inner::create_member_derived(
             &self.inner,
             registrar,
             entity,
@@ -150,7 +147,7 @@ impl Client {
             watchtower,
             watchtower_dest,
         )?;
-        Ok(JoinEntityResponse { tx, member })
+        Ok(CreateMemberResponse { tx, member })
     }
 
     pub fn stake_intent(
@@ -517,7 +514,6 @@ pub struct RegisterCapabilityResponse {
 
 pub struct CreateEntityRequest<'a> {
     pub node_leader: &'a Keypair,
-    pub capabilities: u32,
     pub stake_kind: StakeKind,
     pub registrar: Pubkey,
 }
@@ -530,15 +526,15 @@ pub struct CreateEntityResponse {
 pub struct UpdateEntityRequest<'a> {
     pub entity: Pubkey,
     pub leader: &'a Keypair,
-    pub new_capabilities: u32,
     pub new_leader: Pubkey,
+    pub registrar: Pubkey,
 }
 
 pub struct UpdateEntityResponse {
     pub tx: Signature,
 }
 
-pub struct JoinEntityRequest {
+pub struct CreateMemberRequest {
     pub entity: Pubkey,
     pub delegate: Pubkey,
     pub registrar: Pubkey,
@@ -548,7 +544,7 @@ pub struct JoinEntityRequest {
     pub watchtower_dest: Pubkey,
 }
 
-pub struct JoinEntityResponse {
+pub struct CreateMemberResponse {
     pub tx: Signature,
     pub member: Pubkey,
 }

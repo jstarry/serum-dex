@@ -3,7 +3,7 @@ use serum_registry::access_control;
 use serum_registry::accounts::registrar::{Registrar, CAPABILITY_LEN};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
 
 pub fn handler<'a>(

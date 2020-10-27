@@ -20,35 +20,32 @@ use solana_sdk::sysvar::clock::Clock;
 // provided by the given closure.
 pub fn with_entity<F>(req: WithEntityRequest, f: &mut F) -> Result<(), RegistryError>
 where
-    F: FnMut(&mut Entity, &StakeContext, &Registrar, &Clock) -> Result<(), RegistryError>,
+    F: FnMut(&mut Entity, &Registrar, &Clock) -> Result<(), RegistryError>,
 {
     let WithEntityRequest {
-        pool,
-        mega_pool,
         entity,
         registrar,
         clock,
         program_id,
+        stake_ctx,
     } = req;
     Entity::unpack_mut(
         &mut entity.try_borrow_mut_data()?,
         &mut |entity: &mut Entity| {
-            let stake_ctx = StakeContext::new(pool.get_basket(1)?, mega_pool.get_basket(1)?);
             let clock = access_control::clock(&clock)?;
             let registrar = access_control::registrar(&registrar, program_id)?;
             entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);
 
-            f(entity, &stake_ctx, &registrar, &clock).map_err(Into::into)
+            f(entity, &registrar, &clock).map_err(Into::into)
         },
     )?;
     Ok(())
 }
 
-pub struct WithEntityRequest<'a, 'b, 'c> {
-    pub pool: &'a PoolApi<'b, 'c>,
-    pub mega_pool: &'a PoolApi<'b, 'c>,
-    pub entity: &'a AccountInfo<'c>,
-    pub registrar: &'a AccountInfo<'c>,
-    pub clock: &'a AccountInfo<'c>,
+pub struct WithEntityRequest<'a, 'b> {
+    pub entity: &'a AccountInfo<'b>,
+    pub registrar: &'a AccountInfo<'b>,
+    pub clock: &'a AccountInfo<'b>,
     pub program_id: &'a Pubkey,
+    pub stake_ctx: &'a StakeContext,
 }

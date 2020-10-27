@@ -18,13 +18,14 @@ strict = []
 default = []
 
 [dependencies]
+borsh = { git = "https://github.com/project-serum/borsh", branch = "serum" }
 solana-sdk = { version = "1.3.14", default-features = false }
+solana-program = "1.4.3"
 spl-token = { version = "2.0.6", default-features = false }
 serum-stake = { path = "../" }
 serum-common = { path = "../../common", features = ["program"] }
 serum-pool = { path = "../../pool", default-features = false, features = ["program"] }
 serum-pool-schema = { path = "../../pool/schema", default-features = false, features = ["program"] }
-borsh = { git = "https://github.com/project-serum/borsh", branch = "serum" }
 
 [profile.release]
 lto = true

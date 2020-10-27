@@ -540,6 +540,7 @@ dependencies = [
  "serum-pool-schema 0.1.0",
  "serum-registry 0.1.0",
  "serum-stake 0.1.0",
+ "solana-program 1.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-sdk 1.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "spl-token 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

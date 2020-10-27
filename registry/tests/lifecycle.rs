@@ -26,7 +26,7 @@ fn lifecycle() {
         mint_authority: _,
         god,
         god_msrm: _,
-        god_balance_before,
+        god_balance_before: _,
         god_msrm_balance_before: _,
         god_owner,
     } = genesis;
@@ -155,13 +155,11 @@ fn lifecycle() {
     let node_leader = Keypair::generate(&mut OsRng);
     let node_leader_pubkey = node_leader.pubkey();
     let entity = {
-        let capabilities = 1;
         let stake_kind = StakeKind::Delegated;
 
         let CreateEntityResponse { tx: _, entity } = client
             .create_entity(CreateEntityRequest {
                 node_leader: &node_leader,
-                capabilities,
                 stake_kind,
                 registrar,
             })
@@ -171,34 +169,31 @@ fn lifecycle() {
         assert_eq!(entity_acc.initialized, true);
         assert_eq!(entity_acc.balances.spt_amount, 0);
         assert_eq!(entity_acc.balances.spt_mega_amount, 0);
-        assert_eq!(entity_acc.capabilities, capabilities);
         assert_eq!(entity_acc.stake_kind, stake_kind);
         entity
     };
 
     // Update entity.
     {
-        let new_capabilities = 1 | 2;
         let new_leader = Pubkey::new_rand();
         let _ = client
             .update_entity(UpdateEntityRequest {
                 entity,
                 leader: &node_leader,
                 new_leader,
-                new_capabilities,
+                registrar,
             })
             .unwrap();
 
         let entity_account = client.entity(&entity).unwrap();
-        assert_eq!(entity_account.capabilities, new_capabilities);
         assert_eq!(entity_account.leader, new_leader);
     }
 
-    // Join enitty.
+    // CreateMember.
     let beneficiary = Keypair::generate(&mut OsRng);
     let member = {
-        let JoinEntityResponse { tx: _, member } = client
-            .join_entity(JoinEntityRequest {
+        let CreateMemberResponse { tx: _, member } = client
+            .create_member(CreateMemberRequest {
                 entity,
                 registrar,
                 beneficiary: beneficiary.pubkey(),

@@ -1,32 +1,31 @@
-//! Program entrypoint.
-
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 use serum_common::pack::Pack;
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use serum_registry::instruction::RegistryInstruction;
+use solana_program::info;
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::entrypoint::ProgramResult;
-use solana_sdk::info;
 use solana_sdk::pubkey::Pubkey;
 
 mod create_entity;
+mod create_member;
 mod donate;
 mod end_stake_withdrawal;
 mod entity;
 mod initialize;
-mod join_entity;
 mod pool;
 mod register_capability;
 mod stake;
 mod stake_intent;
 mod stake_intent_withdrawal;
 mod start_stake_withdrawal;
+mod switch_entity;
 mod transfer_stake_intent;
 mod update_entity;
 mod update_member;
 
-solana_sdk::entrypoint!(entry);
+solana_program::entrypoint!(entry);
 fn entry<'a>(
     program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
@@ -61,23 +60,22 @@ fn entry<'a>(
             capability_id,
             capability_fee,
         } => register_capability::handler(program_id, accounts, capability_id, capability_fee),
-        RegistryInstruction::CreateEntity {
-            capabilities,
-            stake_kind,
-        } => create_entity::handler(program_id, accounts, capabilities, stake_kind),
-        RegistryInstruction::UpdateEntity {
-            leader,
-            capabilities,
-        } => update_entity::handler(program_id, accounts, leader, capabilities),
-        RegistryInstruction::JoinEntity {
+        RegistryInstruction::CreateEntity { stake_kind } => {
+            create_entity::handler(program_id, accounts, stake_kind)
+        }
+        RegistryInstruction::UpdateEntity { leader } => {
+            update_entity::handler(program_id, accounts, leader)
+        }
+        RegistryInstruction::CreateMember {
             beneficiary,
             delegate,
             watchtower,
-        } => join_entity::handler(program_id, accounts, beneficiary, delegate, watchtower),
+        } => create_member::handler(program_id, accounts, beneficiary, delegate, watchtower),
         RegistryInstruction::UpdateMember {
             watchtower,
             delegate,
         } => update_member::handler(program_id, accounts, watchtower, delegate),
+        RegistryInstruction::SwitchEntity => switch_entity::handler(program_id, accounts),
         RegistryInstruction::StakeIntent {
             amount,
             mega,

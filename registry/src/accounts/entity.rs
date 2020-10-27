@@ -1,14 +1,10 @@
-use crate::access_control;
-use crate::accounts::Registrar;
-use crate::error::RegistryError;
+use crate::accounts::{Member, Registrar};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use num_enum::IntoPrimitive;
 use serum_common::pack::*;
 use serum_pool_schema::Basket;
-use solana_client_gen::solana_sdk::account_info::AccountInfo;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
 use solana_client_gen::solana_sdk::sysvar::clock::Clock;
-use std::convert::Into;
 
 #[cfg(feature = "client")]
 lazy_static::lazy_static! {
@@ -25,56 +21,85 @@ pub struct Entity {
     pub initialized: bool,
     /// The registrar to which this Member belongs.
     pub registrar: Pubkey,
-    /// Leader of the entity, i.e., the one responsible for fulfilling node
-    /// duties.
+    /// Leader of the entity.
     pub leader: Pubkey,
-    /// Bitmap representing this entity's capabilities .
-    pub capabilities: u32,
-    /// Type of stake backing this entity (determines voting rights)
-    /// of the stakers.
+    /// Type of stake backing this entity, determining voting rights.
     pub stake_kind: StakeKind,
     /// Cumulative stake balances from all member accounts.
     pub balances: Balances,
     /// The activation generation number, incremented whenever EntityState
-    /// transitions froom `Inactive` -> `Active`.
+    /// transitions from `Inactive` -> `Active`. This field is used to determine
+    /// if a Member account is eligible for receiving rewards upon withdrawal
+    /// from the staking pool (the generation of the Member and the Entity must
+    /// be the same).
     pub generation: u64,
     /// State of the Entity. See the `EntityState` comments.
     pub state: EntityState,
 }
 
-// StakeContext represents the current state of the staking pool.
-//
-// Each Basket represents an exchange ratio of *1* staking pool token
-// for the basket of underlying assets.
-#[derive(Clone)]
-pub struct StakeContext {
-    // `basket` has as single quantity representing SRM.
-    basket: Basket,
-    // `mega_basket` has two quantities: MSRM and SRM.
-    mega_basket: Basket,
-}
-
-impl StakeContext {
-    pub fn new(basket: Basket, mega_basket: Basket) -> Self {
-        Self {
-            basket,
-            mega_basket,
-        }
-    }
-    pub fn basket_value(&self, spt_count: u64) -> u64 {
-        assert!(self.basket.quantities.len() == 1);
-        spt_count * self.basket.quantities[0] as u64
-    }
-
-    pub fn mega_basket_value(&self, mega_spt_count: u64) -> u64 {
-        assert!(self.mega_basket.quantities.len() == 2);
-        mega_spt_count * self.mega_basket.quantities[0] as u64 * 1_000_000
-            + mega_spt_count * self.mega_basket.quantities[1] as u64
-    }
-}
-
-// Public methods.
 impl Entity {
+    pub fn remove(&mut self, member: &Member) {
+        // Main book remove.
+        self.sub_stake_intent(member.books.main().balances.stake_intent, false);
+        self.sub_stake_intent(member.books.main().balances.mega_stake_intent, true);
+        self.spt_sub(member.books.main().balances.spt_amount, false);
+        self.spt_sub(member.books.main().balances.spt_mega_amount, true);
+        self.spt_sub(member.books.main().balances.spt_pending_withdrawals, false);
+        self.spt_sub(
+            member.books.main().balances.spt_mega_pending_withdrawals,
+            true,
+        );
+
+        // Delegate book remove.
+        self.sub_stake_intent(member.books.delegate().balances.stake_intent, false);
+        self.sub_stake_intent(member.books.delegate().balances.mega_stake_intent, true);
+        self.spt_sub(member.books.delegate().balances.spt_amount, false);
+        self.spt_sub(member.books.delegate().balances.spt_mega_amount, true);
+        self.spt_sub(
+            member.books.delegate().balances.spt_pending_withdrawals,
+            false,
+        );
+        self.spt_sub(
+            member
+                .books
+                .delegate()
+                .balances
+                .spt_mega_pending_withdrawals,
+            true,
+        );
+    }
+
+    pub fn add(&mut self, member: &Member) {
+        // Main book add.
+        self.add_stake_intent(member.books.main().balances.stake_intent, false);
+        self.add_stake_intent(member.books.main().balances.mega_stake_intent, true);
+        self.spt_add(member.books.main().balances.spt_amount, false);
+        self.spt_add(member.books.main().balances.spt_mega_amount, true);
+        self.spt_add(member.books.main().balances.spt_pending_withdrawals, false);
+        self.spt_add(
+            member.books.main().balances.spt_mega_pending_withdrawals,
+            true,
+        );
+
+        // Delegate book add.
+        self.add_stake_intent(member.books.delegate().balances.stake_intent, false);
+        self.add_stake_intent(member.books.delegate().balances.mega_stake_intent, true);
+        self.spt_add(member.books.delegate().balances.spt_amount, false);
+        self.spt_add(member.books.delegate().balances.spt_mega_amount, true);
+        self.spt_add(
+            member.books.delegate().balances.spt_pending_withdrawals,
+            false,
+        );
+        self.spt_add(
+            member
+                .books
+                .delegate()
+                .balances
+                .spt_mega_pending_withdrawals,
+            true,
+        );
+    }
+
     /// Returns the amount of stake contributing to the activation level.
     pub fn activation_amount(&self, ctx: &StakeContext) -> u64 {
         self.amount_equivalent(ctx) + self.stake_intent_equivalent()
@@ -101,9 +126,17 @@ impl Entity {
     /// Adds to the stake balance.
     pub fn spt_add(&mut self, amount: u64, is_mega: bool) {
         if is_mega {
-            self.balances.mega_stake_intent += amount;
+            self.balances.spt_mega_amount += amount;
         } else {
-            self.balances.stake_intent += amount;
+            self.balances.spt_amount += amount;
+        }
+    }
+
+    pub fn spt_sub(&mut self, amount: u64, is_mega: bool) {
+        if is_mega {
+            self.balances.spt_mega_amount -= amount;
+        } else {
+            self.balances.spt_amount -= amount;
         }
     }
 
@@ -240,5 +273,36 @@ pub enum StakeKind {
 impl Default for StakeKind {
     fn default() -> Self {
         StakeKind::Delegated
+    }
+}
+
+// StakeContext represents the current state of the staking pool.
+//
+// Each Basket represents an exchange ratio of *1* staking pool token
+// for the basket of underlying assets.
+#[derive(Clone)]
+pub struct StakeContext {
+    // `basket` has as single quantity representing SRM.
+    basket: Basket,
+    // `mega_basket` has two quantities: MSRM and SRM.
+    mega_basket: Basket,
+}
+
+impl StakeContext {
+    pub fn new(basket: Basket, mega_basket: Basket) -> Self {
+        Self {
+            basket,
+            mega_basket,
+        }
+    }
+    pub fn basket_value(&self, spt_count: u64) -> u64 {
+        assert!(self.basket.quantities.len() == 1);
+        spt_count * self.basket.quantities[0] as u64
+    }
+
+    pub fn mega_basket_value(&self, mega_spt_count: u64) -> u64 {
+        assert!(self.mega_basket.quantities.len() == 2);
+        mega_spt_count * self.mega_basket.quantities[0] as u64 * 1_000_000
+            + mega_spt_count * self.mega_basket.quantities[1] as u64
     }
 }

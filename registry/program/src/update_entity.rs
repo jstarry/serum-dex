@@ -1,15 +1,15 @@
 use serum_common::pack::Pack;
+use serum_registry::access_control;
 use serum_registry::accounts::Entity;
 use serum_registry::error::{RegistryError, RegistryErrorCode};
+use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
 use solana_sdk::pubkey::Pubkey;
 
 pub fn handler<'a>(
     program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     leader: Pubkey,
-    capabilities: u32,
 ) -> Result<(), RegistryError> {
     info!("handler: update_entity");
 
@@ -17,21 +17,19 @@ pub fn handler<'a>(
 
     let entity_acc_info = next_account_info(acc_infos)?;
     let entity_leader_acc_info = next_account_info(acc_infos)?;
+    let registrar_acc_info = next_account_info(acc_infos)?;
 
     access_control(AccessControlRequest {
         entity_acc_info,
         entity_leader_acc_info,
+        registrar_acc_info,
+        program_id,
     })?;
 
     Entity::unpack_mut(
         &mut entity_acc_info.try_borrow_mut_data()?,
         &mut |entity: &mut Entity| {
-            state_transition(StateTransitionRequest {
-                entity,
-                capabilities,
-                leader,
-            })
-            .map_err(Into::into)
+            state_transition(StateTransitionRequest { entity, leader }).map_err(Into::into)
         },
     )?;
 
@@ -44,9 +42,20 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     let AccessControlRequest {
         entity_acc_info,
         entity_leader_acc_info,
+        registrar_acc_info,
+        program_id,
     } = req;
 
-    // todo
+    // Node leader authorization.
+    if !entity_leader_acc_info.is_signer {
+        return Err(RegistryErrorCode::Unauthorized)?;
+    }
+
+    let _ = access_control::registrar(registrar_acc_info, program_id)?;
+    let entity = access_control::entity(entity_acc_info, registrar_acc_info, program_id)?;
+    if entity.leader != entity.leader {
+        return Err(RegistryErrorCode::EntityLeaderMismatch)?;
+    }
 
     info!("access-control: success");
 
@@ -56,14 +65,9 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: update_entity");
 
-    let StateTransitionRequest {
-        entity,
-        capabilities,
-        leader,
-    } = req;
+    let StateTransitionRequest { entity, leader } = req;
 
     entity.leader = leader;
-    entity.capabilities = capabilities;
 
     info!("state-transition: success");
 
@@ -73,10 +77,11 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 struct AccessControlRequest<'a> {
     entity_acc_info: &'a AccountInfo<'a>,
     entity_leader_acc_info: &'a AccountInfo<'a>,
+    registrar_acc_info: &'a AccountInfo<'a>,
+    program_id: &'a Pubkey,
 }
 
 struct StateTransitionRequest<'a> {
     entity: &'a mut Entity,
-    capabilities: u32,
     leader: Pubkey,
 }

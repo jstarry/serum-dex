@@ -20,7 +20,7 @@ pub struct Member {
     pub entity: Pubkey,
     /// The key that is allowed to redeem assets from the staking pool.
     pub beneficiary: Pubkey,
-    /// The entity's activation id to which the stake belongs.
+    /// The entity's activation counter to which the stake belongs.
     pub generation: u64,
     /// The Watchtower that can withdraw the `Member` account's `main` `Book`.
     pub watchtower: Watchtower,
@@ -155,10 +155,10 @@ impl Watchtower {
 pub struct MemberBooks {
     main: Book,
     /// Delegate authorized to deposit or withdraw from the staking pool
-    /// on behalf of the beneficiary up to the `delegate_amount`. Although
-    /// these funds are part of the Member account, they are not directly
-    /// accessible by the beneficiary. All transactions affecting the delegate
-    /// amount has to be signed by the `delegate` key.
+    /// on behalf of the beneficiary. Although these funds are part of the
+    /// Member account, they are not directly accessible by the beneficiary.
+    /// All transactions affecting the delegate must be signed by *both* the
+    /// `delegate` and the `beneficiary`.
     ///
     /// The only expected use case as of now is the Lockup program.
     delegate: Book,

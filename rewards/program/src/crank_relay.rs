@@ -4,7 +4,7 @@ use serum_registry::accounts::{EntityState, Registrar};
 use serum_rewards::accounts::{vault, Instance};
 use serum_rewards::error::{RewardsError, RewardsErrorCode};
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::pubkey::Pubkey;
 

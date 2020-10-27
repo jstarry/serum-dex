@@ -1,6 +1,6 @@
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
 
 // TODO: update to transfer funds to the pool.

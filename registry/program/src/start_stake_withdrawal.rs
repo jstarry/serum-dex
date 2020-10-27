@@ -3,7 +3,7 @@ use serum_registry::access_control;
 use serum_registry::accounts::{Entity, Member, PendingWithdrawal, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::info;
+use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::sysvar::clock::Clock;
 

@@ -86,7 +86,7 @@ pub fn creation(
     pool_asset_vaults: Vec<&Pubkey>,
     pool_vault_authority: &Pubkey,
     user_pool_token: &Pubkey,
-    user_pool_asset_token: &Pubkey,
+    user_pool_asset_tokens: Vec<&Pubkey>,
     user_authority: &Pubkey,
     registry_signer: &Pubkey,
     amount: u64,
@@ -95,13 +95,23 @@ pub fn creation(
         AccountMeta::new(*pool, false),
         AccountMeta::new(*pool_token_mint, false),
     ];
-    for v in pool_asset_vaults {
-        accounts.push(AccountMeta::new(*v, false));
-    }
+    accounts.extend_from_slice(
+        &pool_asset_vaults
+            .iter()
+            .map(|v| AccountMeta::new(**v, false))
+            .collect::<Vec<_>>(),
+    );
     accounts.extend_from_slice(&[
         AccountMeta::new_readonly(*pool_vault_authority, false),
         AccountMeta::new(*user_pool_token, false),
-        AccountMeta::new(*user_pool_asset_token, false),
+    ]);
+    accounts.extend_from_slice(
+        &user_pool_asset_tokens
+            .iter()
+            .map(|t| AccountMeta::new(**t, false))
+            .collect::<Vec<_>>(),
+    );
+    accounts.extend_from_slice(&[
         AccountMeta::new_readonly(*user_authority, true),
         AccountMeta::new_readonly(spl_token::ID, false),
         // Program specific accounts.

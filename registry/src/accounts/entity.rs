@@ -198,8 +198,8 @@ impl Entity {
 // Private methods.
 impl Entity {
     fn amount_equivalent(&self, ctx: &StakeContext) -> u64 {
-        ctx.basket_value(self.balances.spt_amount)
-            + ctx.mega_basket_value(self.balances.spt_mega_amount)
+        ctx.srm_equivalent(self.balances.spt_amount, false)
+            + ctx.srm_equivalent(self.balances.spt_mega_amount, true)
     }
     fn stake_intent_equivalent(&self) -> u64 {
         self.balances.stake_intent + self.balances.mega_stake_intent * 1_000_000
@@ -276,33 +276,49 @@ impl Default for StakeKind {
     }
 }
 
-// StakeContext represents the current state of the staking pool.
-//
-// Each Basket represents an exchange ratio of *1* staking pool token
-// for the basket of underlying assets.
+/// StakeContext represents the current state of the two node staking pools.
+///
+/// Each Basket represents an exchange ratio of *1* staking pool token
+/// for the basket of underlying assets.
 #[derive(Clone)]
 pub struct StakeContext {
-    // `basket` has as single quantity representing SRM.
+    /// `basket` represents the underlying asset Basket for a *single* SRM
+    /// staking pool token. It  has as single asset: SRM.
     basket: Basket,
-    // `mega_basket` has two quantities: MSRM and SRM.
+    /// `mega_basket` represents the underlying asset Basket for a *single* MSRM
+    /// staking pool token. It has two assets: MSRM and SRM.
     mega_basket: Basket,
 }
 
 impl StakeContext {
     pub fn new(basket: Basket, mega_basket: Basket) -> Self {
+        assert!(basket.quantities.len() == 1);
+        assert!(mega_basket.quantities.len() == 2);
         Self {
             basket,
             mega_basket,
         }
     }
-    pub fn basket_value(&self, spt_count: u64) -> u64 {
-        assert!(self.basket.quantities.len() == 1);
-        spt_count * self.basket.quantities[0] as u64
+    /// Returns the amount of SRM the given `spt_amount` staking pool tokens
+    /// are worth.
+    pub fn srm_equivalent(&self, spt_count: u64, is_mega: bool) -> u64 {
+        if is_mega {
+            spt_count * self.mega_basket.quantities[0] as u64 * 1_000_000
+                + spt_count * self.mega_basket.quantities[1] as u64
+        } else {
+            spt_count * self.basket.quantities[0] as u64
+        }
     }
-
-    pub fn mega_basket_value(&self, mega_spt_count: u64) -> u64 {
-        assert!(self.mega_basket.quantities.len() == 2);
-        mega_spt_count * self.mega_basket.quantities[0] as u64 * 1_000_000
-            + mega_spt_count * self.mega_basket.quantities[1] as u64
+    /// Returns the number of "primary" assets required to purchase `spt_count`
+    /// tokens.
+    ///
+    /// The primary asset refers to SRM or MSRM, depending upon which pool
+    /// is being referenced.
+    pub fn basket_primary_asset(&self, spt_count: u64, mega: bool) -> u64 {
+        if mega {
+            spt_count * self.mega_basket.quantities[0] as u64
+        } else {
+            spt_count * self.basket.quantities[0] as u64
+        }
     }
 }

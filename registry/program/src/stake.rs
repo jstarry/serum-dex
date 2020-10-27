@@ -42,9 +42,9 @@ pub fn handler<'a>(
     let vault_authority_acc_info = next_account_info(acc_infos)?;
 
     // Pool accounts.
-    let (stake_ctx, pool, mega_pool) = {
+    let (stake_ctx, pool) = {
         let cfg = PoolConfig::Stake {
-            vault_authority_acc_info,
+            registry_signer_acc_info: vault_authority_acc_info,
             registrar_acc_info,
             token_program_acc_info,
         };

@@ -13,8 +13,10 @@ use solana_sdk::pubkey::Pubkey;
 mod create_entity;
 mod donate;
 mod end_stake_withdrawal;
+mod entity;
 mod initialize;
 mod join_entity;
+mod pool;
 mod register_capability;
 mod stake;
 mod stake_intent;
@@ -43,6 +45,7 @@ fn entry<'a>(
             deactivation_timelock_premium,
             reward_activation_threshold,
             pool,
+            mega_pool,
         } => initialize::handler(
             program_id,
             accounts,
@@ -52,6 +55,7 @@ fn entry<'a>(
             deactivation_timelock_premium,
             reward_activation_threshold,
             pool,
+            mega_pool,
         ),
         RegistryInstruction::RegisterCapability {
             capability_id,

@@ -169,8 +169,8 @@ fn lifecycle() {
         let entity_acc = client.entity(&entity).unwrap();
         assert_eq!(entity_acc.leader, node_leader_pubkey);
         assert_eq!(entity_acc.initialized, true);
-        assert_eq!(entity_acc.balances.amount, 0);
-        assert_eq!(entity_acc.balances.mega_amount, 0);
+        assert_eq!(entity_acc.balances.spt_amount, 0);
+        assert_eq!(entity_acc.balances.spt_mega_amount, 0);
         assert_eq!(entity_acc.capabilities, capabilities);
         assert_eq!(entity_acc.stake_kind, stake_kind);
         entity
@@ -213,8 +213,8 @@ fn lifecycle() {
         assert_eq!(member_account.entity, entity);
         assert_eq!(member_account.beneficiary, beneficiary.pubkey());
         assert_eq!(member_account.books.delegate().owner, safe_vault_authority,);
-        assert_eq!(member_account.books.main().balances.amount, 0);
-        assert_eq!(member_account.books.main().balances.mega_amount, 0);
+        assert_eq!(member_account.books.main().balances.spt_amount, 0);
+        assert_eq!(member_account.books.main().balances.spt_mega_amount, 0);
         member
     };
 

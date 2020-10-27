@@ -3189,6 +3189,7 @@ dependencies = [
  "serum-common-tests",
  "serum-lockup",
  "serum-lockup-client",
+ "serum-pool-schema",
  "serum-registry-client",
  "solana-client-gen",
  "spl-token",

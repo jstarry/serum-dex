@@ -29,6 +29,21 @@ pub struct Member {
 }
 
 impl Member {
+    pub fn stake_intent(&self, mega: bool, delegate: bool) -> u64 {
+        if delegate {
+            if mega {
+                self.books.delegate.balances.mega_stake_intent
+            } else {
+                self.books.delegate.balances.stake_intent
+            }
+        } else {
+            if mega {
+                self.books.main.balances.mega_stake_intent
+            } else {
+                self.books.main.balances.stake_intent
+            }
+        }
+    }
     pub fn add_stake_intent(&mut self, amount: u64, mega: bool, delegate: bool) {
         if delegate {
             if mega {
@@ -59,67 +74,52 @@ impl Member {
             }
         }
     }
-    pub fn add_stake(&mut self, amount: u64, mega: bool, delegate: bool) {
+    pub fn spt_add(&mut self, amount: u64, mega: bool, delegate: bool) {
         if delegate {
             if mega {
-                self.books.delegate.balances.mega_amount += amount;
+                self.books.delegate.balances.spt_mega_amount += amount;
             } else {
-                self.books.delegate.balances.amount += amount;
+                self.books.delegate.balances.spt_amount += amount;
             }
         } else {
             if mega {
-                self.books.main.balances.mega_amount += amount;
+                self.books.main.balances.spt_mega_amount += amount;
             } else {
-                self.books.main.balances.amount += amount;
+                self.books.main.balances.spt_amount += amount;
             }
         }
     }
-    pub fn transfer_pending_withdrawal(&mut self, amount: u64, mega: bool, delegate: bool) {
+    pub fn spt_transfer_pending_withdrawal(&mut self, amount: u64, mega: bool, delegate: bool) {
         if delegate {
             if mega {
-                self.books.delegate.balances.mega_amount -= amount;
-                self.books.delegate.balances.mega_pending_withdrawals += amount;
+                self.books.delegate.balances.spt_mega_amount -= amount;
+                self.books.delegate.balances.spt_mega_pending_withdrawals += amount;
             } else {
-                self.books.delegate.balances.amount -= amount;
-                self.books.delegate.balances.pending_withdrawals += amount;
+                self.books.delegate.balances.spt_amount -= amount;
+                self.books.delegate.balances.spt_pending_withdrawals += amount;
             }
         } else {
             if mega {
-                self.books.main.balances.mega_amount -= amount;
-                self.books.main.balances.mega_pending_withdrawals += amount;
+                self.books.main.balances.spt_mega_amount -= amount;
+                self.books.main.balances.spt_mega_pending_withdrawals += amount;
             } else {
-                self.books.main.balances.amount -= amount;
-                self.books.main.balances.pending_withdrawals += amount;
+                self.books.main.balances.spt_amount -= amount;
+                self.books.main.balances.spt_pending_withdrawals += amount;
             }
         }
     }
     pub fn stake_is_empty(&self) -> bool {
-        self.books.main.balances.amount != 0
-            || self.books.main.balances.mega_amount != 0
-            || self.books.delegate.balances.amount != 0
-            || self.books.delegate.balances.mega_amount != 0
+        self.books.main.balances.spt_amount != 0
+            || self.books.main.balances.spt_mega_amount != 0
+            || self.books.delegate.balances.spt_amount != 0
+            || self.books.delegate.balances.spt_mega_amount != 0
     }
     pub fn set_delegate(&mut self, delegate: Pubkey) {
-        assert!(self.books.delegate.balances.amount == 0);
+        assert!(self.books.delegate.balances.spt_amount == 0);
         self.books.delegate = Book {
             owner: delegate,
             balances: Default::default(),
         };
-    }
-    pub fn stake_intent(&self, mega: bool, delegate: bool) -> u64 {
-        if delegate {
-            if mega {
-                self.books.delegate.balances.mega_stake_intent
-            } else {
-                self.books.delegate.balances.stake_intent
-            }
-        } else {
-            if mega {
-                self.books.main.balances.mega_stake_intent
-            } else {
-                self.books.main.balances.stake_intent
-            }
-        }
     }
 }
 
@@ -195,22 +195,24 @@ pub struct Book {
 
 #[derive(Default, Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct Balances {
-    pub amount: u64,
-    pub mega_amount: u64,
+    // Denominated in staking pool tokens (spt).
+    pub spt_amount: u64,
+    pub spt_mega_amount: u64,
+    pub spt_pending_withdrawals: u64,
+    pub spt_mega_pending_withdrawals: u64,
+    // Denominated in SRM/MSRM.
     pub stake_intent: u64,
     pub mega_stake_intent: u64,
-    pub pending_withdrawals: u64,
-    pub mega_pending_withdrawals: u64,
 }
 
 impl Balances {
     pub fn is_empty(&self) -> bool {
-        self.amount
-            + self.mega_amount
+        self.spt_amount
+            + self.spt_mega_amount
+            + self.spt_pending_withdrawals
+            + self.spt_mega_pending_withdrawals
             + self.stake_intent
             + self.mega_stake_intent
-            + self.pending_withdrawals
-            + self.mega_pending_withdrawals
             == 0
     }
 }

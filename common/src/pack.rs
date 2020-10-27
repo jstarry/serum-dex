@@ -3,12 +3,13 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 // Re-export for users of the `packable` macro.
+pub use solana_sdk;
 pub use solana_sdk::program_error::ProgramError;
 
 /// The Pack trait defines Account serialization for Solana programs.
 ///
 /// If possible, don't use `*_unchecked` methods.
-pub trait Pack: std::marker::Sized {
+pub trait Pack: std::marker::Sized + std::fmt::Debug {
     /// Serializes `src` into `dst`. The size of the serialization and
     /// dst must be equal.
     fn pack(src: Self, dst: &mut [u8]) -> Result<(), ProgramError>;
@@ -34,6 +35,11 @@ pub trait Pack: std::marker::Sized {
         let mut src_mut = src;
         Pack::unpack_unchecked(&mut src_mut).and_then(|r: Self| {
             if !src_mut.is_empty() {
+                #[cfg(feature = "program")]
+                solana_sdk::info!(&format!(
+                    "unpack does not consume the entire slice: {:?}",
+                    r
+                ));
                 return Err(ProgramError::InvalidAccountData);
             }
             Ok(r)
@@ -75,6 +81,8 @@ macro_rules! packable {
         impl Pack for $my_struct {
             fn pack(src: $my_struct, dst: &mut [u8]) -> Result<(), ProgramError> {
                 if src.size()? != dst.len() as u64 {
+                    #[cfg(feature = "program")]
+                    solana_sdk::info!("invalid size for pack array");
                     return Err(ProgramError::InvalidAccountData);
                 }
                 serum_common::pack::into_bytes(&src, dst)

@@ -15,6 +15,7 @@ pub fn handler<'a>(
     deactivation_timelock_premium: i64,
     reward_activation_threshold: u64,
     pool: Pubkey,
+    mega_pool: Pubkey,
 ) -> Result<(), RegistryError> {
     info!("handler: initialize");
 
@@ -46,7 +47,8 @@ pub fn handler<'a>(
                 nonce,
                 deactivation_timelock_premium,
                 reward_activation_threshold,
-                pool, // Not validated by access control.
+                pool,      // Not validated.
+                mega_pool, // Not validated.
             })
             .map_err(Into::into)
         },
@@ -120,6 +122,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         deactivation_timelock_premium,
         reward_activation_threshold,
         pool,
+        mega_pool,
     } = req;
 
     registrar.initialized = true;
@@ -132,6 +135,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     registrar.nonce = nonce;
     registrar.reward_activation_threshold = reward_activation_threshold;
     registrar.pool = pool;
+    registrar.mega_pool = mega_pool;
 
     info!("state-transition: success");
 
@@ -157,4 +161,5 @@ struct StateTransitionRequest<'a, 'b> {
     mega_vault_acc_info: &'a AccountInfo<'a>,
     reward_activation_threshold: u64,
     pool: Pubkey,
+    mega_pool: Pubkey,
 }

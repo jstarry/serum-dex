@@ -198,7 +198,9 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     }
 
     member.sub_stake_intent(amount, is_mega, is_delegate);
-    entity.sub_stake_intent(amount, is_mega, &registrar, &clock);
+    entity.sub_stake_intent(amount, is_mega);
+
+    // todo: transition state here
 
     info!("state-transition: success");
 

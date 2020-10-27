@@ -35,7 +35,15 @@ impl Client {
             pool_program_id,
             pool_token_decimals,
         } = req;
-        let (tx, registrar, nonce, pool, pool_vault_signer_nonce) = inner::initialize(
+        let (
+            tx,
+            registrar,
+            nonce,
+            pool,
+            pool_vault_signer_nonce,
+            mega_pool,
+            mega_pool_vault_signer_nonce,
+        ) = inner::initialize(
             &self.inner,
             &mint,
             &mega_mint,
@@ -52,6 +60,8 @@ impl Client {
             nonce,
             pool,
             pool_vault_signer_nonce,
+            mega_pool,
+            mega_pool_vault_signer_nonce,
         })
     }
 
@@ -231,39 +241,18 @@ impl Client {
             pool_program_id,
             depositor_pool_token,
         } = req;
-        let r = self.registrar(&registrar)?;
-        let pool_state = self.stake_pool(&registrar)?;
-        let delegate = false;
 
-        // Create the pool token account (to issue tokens) if none was provided.
-        let depositor_pool_token = {
-            if let Some(dpt) = depositor_pool_token {
-                dpt
-            } else {
-                rpc::create_token_account(
-                    self.rpc(),
-                    &pool_state.pool_token_mint.clone().into(),
-                    &depositor_authority.pubkey(),
-                    self.payer(),
-                )?
-                .pubkey()
-            }
-        };
-        let retbuf = {
-            let dummy_basket = Basket {
-                quantities: vec![0],
-            };
-            rpc::create_account_rent_exempt(
-                self.rpc(),
-                self.payer(),
-                dummy_basket.size().expect("always serializes") as usize,
-                &spl_shared_memory::ID,
-            )?
-            .pubkey()
-        };
-        // TODO: validate asset len.
-        let pool_asset_vault = pool_state.assets[0].clone().vault_address.into();
-        let accounts = [
+        let (mut pool_accounts, pool_asset_vault, depositor_pool_token) = self
+            .stake_pool_accounts(
+                pool_program_id,
+                registrar,
+                depositor,
+                depositor_pool_token,
+                depositor_authority,
+                mega,
+            )?;
+
+        let mut accounts = vec![
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
             AccountMeta::new(depositor, false),
             AccountMeta::new(pool_asset_vault, false),
@@ -275,18 +264,10 @@ impl Client {
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
             AccountMeta::new_readonly(self.vault_authority(&registrar)?, false),
-            AccountMeta::new_readonly(pool_program_id, false),
-            // Pool interface.
-            AccountMeta::new(r.pool, false),
-            AccountMeta::new(pool_state.pool_token_mint.into(), false),
-            AccountMeta::new(pool_asset_vault, false),
-            AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
-            AccountMeta::new(depositor_pool_token, false),
-            AccountMeta::new(depositor, false),
-            AccountMeta::new_readonly(depositor_authority.pubkey(), true),
-            AccountMeta::new(retbuf, false),
-            AccountMeta::new_readonly(spl_shared_memory::ID, false),
         ];
+
+        accounts.append(&mut pool_accounts);
+
         let signers = [self.payer(), beneficiary, depositor_authority];
 
         let tx = self.inner.stake_with_signers(
@@ -294,7 +275,7 @@ impl Client {
             &accounts,
             pool_token_amount,
             mega,
-            delegate,
+            false, // delegate
         )?;
 
         Ok(StakeResponse {
@@ -319,6 +300,113 @@ impl Client {
 
     pub fn donate(&self, req: DonateRequest) -> Result<DonateResponse, ClientError> {
         Ok(DonateResponse {})
+    }
+
+    fn stake_pool_accounts(
+        &self,
+        pool_program_id: Pubkey,
+        registrar: Pubkey,
+        depositor: Pubkey,
+        depositor_pool_token: Option<Pubkey>,
+        depositor_authority: &Keypair,
+        mega: bool,
+    ) -> Result<(Vec<AccountMeta>, Pubkey, Pubkey), ClientError> {
+        let r = self.registrar(&registrar)?;
+        let (mut main_pool, main_pool_asset_vault, main_pool_mint, mut alt_pool) = {
+            let (pool, pool_asset_vault, pool_mint) = {
+                let pool_state = self.stake_pool(&registrar)?;
+                assert!(pool_state.assets.len() == 1);
+                let pool_asset_vault = pool_state.assets[0].clone().vault_address.into();
+                let retbuf = {
+                    let dummy_basket = Basket {
+                        quantities: vec![0],
+                    };
+                    rpc::create_account_rent_exempt(
+                        self.rpc(),
+                        self.payer(),
+                        dummy_basket.size().expect("always serializes") as usize,
+                        &spl_shared_memory::ID,
+                    )?
+                    .pubkey()
+                };
+                let pool_tok_mint = pool_state.pool_token_mint.into();
+                let accs = vec![
+                    AccountMeta::new(r.pool, false),
+                    AccountMeta::new(pool_tok_mint, false),
+                    AccountMeta::new(pool_asset_vault, false),
+                    AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
+                    AccountMeta::new(retbuf, false),
+                ];
+                (accs, pool_asset_vault, pool_tok_mint)
+            };
+            let (mega_pool, mega_pool_asset_vault, mega_pool_mint) = {
+                let pool_state = self.stake_mega_pool(&registrar)?;
+                assert!(pool_state.assets.len() == 2);
+                let pool_asset_vault_1 = pool_state.assets[0].clone().vault_address.into();
+                let pool_asset_vault_2 = pool_state.assets[1].clone().vault_address.into();
+                let retbuf = {
+                    let dummy_basket = Basket {
+                        quantities: vec![0, 0],
+                    };
+                    rpc::create_account_rent_exempt(
+                        self.rpc(),
+                        self.payer(),
+                        dummy_basket.size().expect("always serializes") as usize,
+                        &spl_shared_memory::ID,
+                    )?
+                    .pubkey()
+                };
+                let pool_tok_mint = pool_state.pool_token_mint.into();
+                let accs = vec![
+                    AccountMeta::new(r.mega_pool, false),
+                    AccountMeta::new(pool_tok_mint, false),
+                    AccountMeta::new(pool_asset_vault_1, false),
+                    AccountMeta::new(pool_asset_vault_2, false),
+                    AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
+                    AccountMeta::new(retbuf, false),
+                ];
+                (accs, pool_asset_vault_1, pool_tok_mint)
+            };
+            if mega {
+                (mega_pool, mega_pool_asset_vault, mega_pool_mint, pool)
+            } else {
+                (pool, pool_asset_vault, pool_mint, mega_pool)
+            }
+        };
+
+        let depositor_pool_token = {
+            if let Some(dpt) = depositor_pool_token {
+                dpt
+            } else {
+                rpc::create_token_account(
+                    self.rpc(),
+                    &main_pool_mint.into(),
+                    &depositor_authority.pubkey(),
+                    self.payer(),
+                )?
+                .pubkey()
+            }
+        };
+
+        // Create the pool token account (to issue tokens) if none was provided.
+
+        let mut pids_pool = vec![
+            AccountMeta::new_readonly(pool_program_id, false),
+            AccountMeta::new_readonly(spl_shared_memory::ID, false),
+        ];
+        let mut stake_specific = vec![
+            AccountMeta::new(depositor_pool_token, false),
+            // TODO: if mega then vec
+            AccountMeta::new(depositor, false),
+            AccountMeta::new_readonly(depositor_authority.pubkey(), true),
+        ];
+        let mut accounts = vec![];
+        accounts.append(&mut pids_pool);
+        accounts.append(&mut main_pool);
+        accounts.append(&mut alt_pool);
+        accounts.append(&mut stake_specific);
+
+        Ok((accounts, main_pool_asset_vault, depositor_pool_token))
     }
 }
 
@@ -353,6 +441,11 @@ impl Client {
     pub fn stake_pool(&self, registrar: &Pubkey) -> Result<PoolState, ClientError> {
         let r = self.registrar(registrar)?;
         rpc::get_account::<PoolState>(self.inner.rpc(), &r.pool).map_err(Into::into)
+    }
+
+    pub fn stake_mega_pool(&self, registrar: &Pubkey) -> Result<PoolState, ClientError> {
+        let r = self.registrar(registrar)?;
+        rpc::get_account::<PoolState>(self.inner.rpc(), &r.mega_pool).map_err(Into::into)
     }
 
     pub fn stake_pool_asset_vault(&self, registrar: &Pubkey) -> Result<TokenAccount, ClientError> {
@@ -407,6 +500,8 @@ pub struct InitializeResponse {
     pub nonce: u8,
     pub pool: Pubkey,
     pub pool_vault_signer_nonce: u8,
+    pub mega_pool: Pubkey,
+    pub mega_pool_vault_signer_nonce: u8,
 }
 
 pub struct RegisterCapabilityRequest<'a> {

@@ -526,6 +526,7 @@ dependencies = [
  "bytemuck 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_enum 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serum-common 0.1.0",
+ "serum-pool-schema 0.1.0",
  "solana-client-gen 0.1.0",
  "spl-token 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.21 (registry+https://github.com/rust-lang/crates.io-index)",

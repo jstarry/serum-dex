@@ -1,14 +1,9 @@
 use borsh::BorshSerialize;
-use serum_pool::context::{PoolContext, UserAccounts};
+use serum_pool::context::PoolContext;
 use serum_pool_schema::{Basket, PoolState};
-use serum_stake::error::{StakeError, StakeErrorCode};
-use solana_sdk::account_info::AccountInfo;
+use serum_stake::error::StakeError;
 use solana_sdk::info;
 use solana_sdk::instruction::{AccountMeta, Instruction};
-use solana_sdk::program_error::ProgramError;
-use solana_sdk::pubkey::Pubkey;
-use spl_token::instruction as token_instruction;
-use std::convert::TryInto;
 
 pub fn handler(
     ctx: &PoolContext,
@@ -16,10 +11,17 @@ pub fn handler(
     spt_amount: u64,
 ) -> Result<Basket, StakeError> {
     let basket = {
+        // TODO: check the semantics of this make sense.
+        //
+        // If no pool tokens are in circulation, then to create `spt_amount`
+        // one must deposit the same `spt_amount`. Otherwise, take a
+        // `simple_basket`.
         if ctx.total_pool_tokens()? == 0 {
-            Basket {
-                quantities: vec![spt_amount as i64],
+            let mut quantities = vec![spt_amount as i64];
+            if state.assets.len() == 2 {
+                quantities.push(0);
             }
+            Basket { quantities }
         } else {
             ctx.get_simple_basket(spt_amount)?
         }

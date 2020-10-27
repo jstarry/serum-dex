@@ -12,7 +12,7 @@ pub mod error;
 #[cfg_attr(feature = "client", solana_client_gen)]
 pub mod instruction {
     use super::*;
-    #[derive(BorshSerialize, BorshDeserialize, BorshSchema)]
+    #[derive(Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
     pub enum RegistryInstruction {
         /// Initializes the registry instance for use.
         ///
@@ -37,6 +37,7 @@ pub mod instruction {
             reward_activation_threshold: u64,
             /// Address of the staking pool.
             pool: Pubkey,
+            mega_pool: Pubkey,
         },
         /// RegisterCapability registers a node capability for reward
         /// collection, or overwrites an existing capability (e.g., on fee

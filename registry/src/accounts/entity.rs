@@ -4,6 +4,7 @@ use crate::error::RegistryError;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use num_enum::IntoPrimitive;
 use serum_common::pack::*;
+use serum_pool_schema::Basket;
 use solana_client_gen::solana_sdk::account_info::AccountInfo;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
 use solana_client_gen::solana_sdk::sysvar::clock::Clock;
@@ -41,71 +42,80 @@ pub struct Entity {
     pub state: EntityState,
 }
 
+// StakeContext represents the current state of the staking pool.
+//
+// Each Basket represents an exchange ratio of *1* staking pool token
+// for the basket of underlying assets.
+#[derive(Clone)]
+pub struct StakeContext {
+    // `basket` has as single quantity representing SRM.
+    basket: Basket,
+    // `mega_basket` has two quantities: MSRM and SRM.
+    mega_basket: Basket,
+}
+
+impl StakeContext {
+    pub fn new(basket: Basket, mega_basket: Basket) -> Self {
+        Self {
+            basket,
+            mega_basket,
+        }
+    }
+    pub fn basket_value(&self, spt_count: u64) -> u64 {
+        assert!(self.basket.quantities.len() == 1);
+        spt_count * self.basket.quantities[0] as u64
+    }
+
+    pub fn mega_basket_value(&self, mega_spt_count: u64) -> u64 {
+        assert!(self.mega_basket.quantities.len() == 2);
+        mega_spt_count * self.mega_basket.quantities[0] as u64 * 1_000_000
+            + mega_spt_count * self.mega_basket.quantities[1] as u64
+    }
+}
+
 // Public methods.
 impl Entity {
     /// Returns the amount of stake contributing to the activation level.
-    pub fn activation_amount(&self) -> u64 {
-        self.amount_equivalent() + self.stake_intent_equivalent()
+    pub fn activation_amount(&self, ctx: &StakeContext) -> u64 {
+        self.amount_equivalent(ctx) + self.stake_intent_equivalent()
     }
 
     /// Adds to the stake intent balance.
-    pub fn add_stake_intent(
-        &mut self,
-        amount: u64,
-        mega: bool,
-        registrar: &Registrar,
-        clock: &Clock,
-    ) {
+    pub fn add_stake_intent(&mut self, amount: u64, mega: bool) {
         if mega {
             self.balances.mega_stake_intent += amount;
         } else {
             self.balances.stake_intent += amount;
         }
-        self.transition_activation_if_needed(registrar, clock);
     }
 
     /// Subtracts from the stake intent balance.
-    pub fn sub_stake_intent(
-        &mut self,
-        amount: u64,
-        mega: bool,
-        registrar: &Registrar,
-        clock: &Clock,
-    ) {
+    pub fn sub_stake_intent(&mut self, amount: u64, mega: bool) {
         if mega {
             self.balances.mega_stake_intent -= amount;
         } else {
             self.balances.stake_intent -= amount;
         }
-        self.transition_activation_if_needed(registrar, clock);
     }
 
     /// Adds to the stake balance.
-    pub fn add_stake(&mut self, amount: u64, is_mega: bool, registrar: &Registrar, clock: &Clock) {
+    pub fn spt_add(&mut self, amount: u64, is_mega: bool) {
         if is_mega {
             self.balances.mega_stake_intent += amount;
         } else {
             self.balances.stake_intent += amount;
         }
-        self.transition_activation_if_needed(registrar, clock);
     }
 
     /// Moves stake into the pending wtihdrawal state.
-    pub fn transfer_pending_withdrawal(
-        &mut self,
-        amount: u64,
-        mega: bool,
-        registrar: &Registrar,
-        clock: &Clock,
-    ) {
+    pub fn spt_transfer_pending_withdrawal(&mut self, amount: u64, mega: bool) {
         if mega {
-            self.balances.mega_amount -= amount;
-            self.balances.mega_pending_withdrawals += amount;
+            self.balances.spt_mega_amount -= amount;
+            self.balances.spt_mega_pending_withdrawals += amount;
         } else {
-            self.balances.amount -= amount;
-            self.balances.pending_withdrawals += amount;
+            self.balances.spt_amount -= amount;
+            self.balances.spt_pending_withdrawals += amount;
         }
-        self.transition_activation_if_needed(registrar, clock);
     }
 
     /// Transitions the EntityState finite state machine. This should be called
@@ -113,10 +123,15 @@ impl Entity {
     /// to date status of the EntityState. It should also be called after any
     /// mutation to the SRM equivalent deposit of this entity to keep the state
     /// up to date.
-    pub fn transition_activation_if_needed(&mut self, registrar: &Registrar, clock: &Clock) {
+    pub fn transition_activation_if_needed(
+        &mut self,
+        ctx: &StakeContext,
+        registrar: &Registrar,
+        clock: &Clock,
+    ) {
         match self.state {
             EntityState::Inactive => {
-                if self.meets_activation_requirements(registrar) {
+                if self.meets_activation_requirements(ctx, registrar) {
                     self.state = EntityState::Active;
                     self.generation += 1;
                 }
@@ -130,7 +145,7 @@ impl Entity {
                 }
             }
             EntityState::Active => {
-                if !self.meets_activation_requirements(registrar) {
+                if !self.meets_activation_requirements(ctx, registrar) {
                     self.state = EntityState::PendingDeactivation {
                         deactivation_start_ts: clock.unix_timestamp,
                     }
@@ -141,16 +156,17 @@ impl Entity {
 
     /// Returns true if this Entity is capable of being "activated", i.e., can
     /// enter the staking pool.
-    pub fn meets_activation_requirements(&self, registrar: &Registrar) -> bool {
-        self.activation_amount() >= registrar.reward_activation_threshold
-            && self.balances.mega_amount >= 1
+    pub fn meets_activation_requirements(&self, ctx: &StakeContext, registrar: &Registrar) -> bool {
+        self.activation_amount(ctx) >= registrar.reward_activation_threshold
+            && self.balances.spt_mega_amount >= 1
     }
 }
 
 // Private methods.
 impl Entity {
-    fn amount_equivalent(&self) -> u64 {
-        self.balances.amount + self.balances.mega_amount * 1_000_000
+    fn amount_equivalent(&self, ctx: &StakeContext) -> u64 {
+        ctx.basket_value(self.balances.spt_amount)
+            + ctx.mega_basket_value(self.balances.spt_mega_amount)
     }
     fn stake_intent_equivalent(&self) -> u64 {
         self.balances.stake_intent + self.balances.mega_stake_intent * 1_000_000
@@ -161,12 +177,12 @@ serum_common::packable!(Entity);
 
 #[derive(Default, Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct Balances {
-    pub amount: u64,
-    pub mega_amount: u64,
+    pub spt_amount: u64,
+    pub spt_mega_amount: u64,
+    pub spt_pending_withdrawals: u64,
+    pub spt_mega_pending_withdrawals: u64,
     pub stake_intent: u64,
     pub mega_stake_intent: u64,
-    pub pending_withdrawals: u64,
-    pub mega_pending_withdrawals: u64,
 }
 
 /// EntityState defines a finite-state-machine (FSM) determining the actions
@@ -225,44 +241,4 @@ impl Default for StakeKind {
     fn default() -> Self {
         StakeKind::Delegated
     }
-}
-
-// with_entity should be used for any instruction relying on the most up to
-// date `state` of an Entity.
-//
-//
-// As time, passes, it's possible an Entity's internal FSM *should* have
-// transitioned (i.e., from PendingDeactivation -> Inactive), but didn't
-// because no transaction was invoked.
-//
-// This method transitions the Entity's state, before performing the action
-// provided by the given closure.
-pub fn with_entity<F>(req: WithEntityRequest, f: &mut F) -> Result<(), RegistryError>
-where
-    F: FnMut(&mut Entity, &Registrar, &Clock) -> Result<(), RegistryError>,
-{
-    let WithEntityRequest {
-        entity,
-        registrar,
-        clock,
-        program_id,
-    } = req;
-    Entity::unpack_mut(
-        &mut entity.try_borrow_mut_data()?,
-        &mut |entity: &mut Entity| {
-            let clock = access_control::clock(&clock)?;
-            let registrar = access_control::registrar(&registrar, program_id)?;
-            entity.transition_activation_if_needed(&registrar, &clock);
-
-            f(entity, &registrar, &clock).map_err(Into::into)
-        },
-    )?;
-    Ok(())
-}
-
-pub struct WithEntityRequest<'a> {
-    pub entity: &'a AccountInfo<'a>,
-    pub registrar: &'a AccountInfo<'a>,
-    pub clock: &'a AccountInfo<'a>,
-    pub program_id: &'a Pubkey,
 }

@@ -1,5 +1,5 @@
 use serum_common::client::rpc;
-use serum_pool_schema::POOL_STATE_SIZE;
+use serum_pool_schema::{MEGA_POOL_STATE_SIZE, POOL_STATE_SIZE};
 use serum_registry::accounts;
 use serum_registry::accounts::Watchtower;
 use serum_registry::client::{Client as InnerClient, ClientError as InnerClientError};
@@ -19,7 +19,7 @@ pub fn initialize(
     reward_activation_threshold: u64,
     pool_program_id: &Pubkey,
     pool_token_decimals: u8,
-) -> Result<(Signature, Pubkey, u8, Pubkey, u8), InnerClientError> {
+) -> Result<(Signature, Pubkey, u8, Pubkey, u8, Pubkey, u8), InnerClientError> {
     let registrar_kp = Keypair::generate(&mut OsRng);
     let (registrar_vault_authority, nonce) =
         Pubkey::find_program_address(&[registrar_kp.pubkey().as_ref()], client.program());
@@ -42,6 +42,10 @@ pub fn initialize(
 
     let pool_state_kp = Keypair::generate(&mut OsRng);
     let (pool_vault_authority, pool_vault_nonce) =
+        Pubkey::find_program_address(&[&[]], pool_program_id);
+
+    let mega_pool_state_kp = Keypair::generate(&mut OsRng);
+    let (mega_pool_vault_authority, mega_pool_vault_nonce) =
         Pubkey::find_program_address(&[&[]], pool_program_id);
 
     // Now build the final transaction.
@@ -75,6 +79,19 @@ pub fn initialize(
                 pool_program_id,
             )
         };
+        let create_mega_pool_acc_instr = {
+            let lamports = client
+                .rpc()
+                .get_minimum_balance_for_rent_exemption(*POOL_STATE_SIZE as usize)
+                .map_err(InnerClientError::RpcError)?;
+            system_instruction::create_account(
+                &client.payer().pubkey(),
+                &mega_pool_state_kp.pubkey(),
+                lamports,
+                *MEGA_POOL_STATE_SIZE,
+                pool_program_id,
+            )
+        };
         let initialize_pool_instr = {
             let pool_asset_mint = mint;
             let pool_asset_vault = rpc::create_token_account(
@@ -95,10 +112,45 @@ pub fn initialize(
                 pool_program_id,
                 &pool_state_kp.pubkey(),
                 &pool_token_mint.pubkey(),
-                &pool_asset_vault.pubkey(),
+                vec![&pool_asset_vault.pubkey()],
                 &pool_vault_authority,
                 &registrar_vault_authority,
                 pool_vault_nonce,
+            )
+        };
+        // Mega pool has both SRM and MSRM in the basket.
+        let initialize_mega_pool_instr = {
+            let pool_asset_mint = mint;
+            let mega_pool_asset_mint = mega_mint;
+            let pool_asset_vault = rpc::create_token_account(
+                client.rpc(),
+                pool_asset_mint,
+                &mega_pool_vault_authority,
+                client.payer(),
+            )
+            .map_err(|e| InnerClientError::RawError(e.to_string()))?;
+            let mega_pool_asset_vault = rpc::create_token_account(
+                client.rpc(),
+                mega_pool_asset_mint,
+                &mega_pool_vault_authority,
+                client.payer(),
+            )
+            .map_err(|e| InnerClientError::RawError(e.to_string()))?;
+            let (mega_pool_token_mint, _tx_sig) = rpc::new_mint(
+                client.rpc(),
+                client.payer(),
+                &mega_pool_vault_authority,
+                pool_token_decimals,
+            )
+            .map_err(|e| InnerClientError::RawError(e.to_string()))?;
+            serum_stake::instruction::initialize(
+                pool_program_id,
+                &mega_pool_state_kp.pubkey(),
+                &mega_pool_token_mint.pubkey(),
+                vec![&mega_pool_asset_vault.pubkey(), &pool_asset_vault.pubkey()],
+                &mega_pool_vault_authority,
+                &registrar_vault_authority,
+                mega_pool_vault_nonce,
             )
         };
 
@@ -118,14 +170,17 @@ pub fn initialize(
                 deactivation_timelock_premium,
                 reward_activation_threshold,
                 pool_state_kp.pubkey(),
+                mega_pool_state_kp.pubkey(),
             )
         };
 
         vec![
             create_safe_acc_instr,
             create_pool_acc_instr,
+            create_mega_pool_acc_instr,
             initialize_registrar_instr,
             initialize_pool_instr,
+            initialize_mega_pool_instr,
         ]
     };
 
@@ -134,7 +189,12 @@ pub fn initialize(
             .rpc()
             .get_recent_blockhash()
             .map_err(|e| InnerClientError::RawError(e.to_string()))?;
-        let signers = vec![client.payer(), &registrar_kp, &pool_state_kp];
+        let signers = vec![
+            client.payer(),
+            &registrar_kp,
+            &pool_state_kp,
+            &mega_pool_state_kp,
+        ];
         Transaction::new_signed_with_payer(
             &instructions,
             Some(&client.payer().pubkey()),
@@ -159,6 +219,8 @@ pub fn initialize(
                 nonce,
                 pool_state_kp.pubkey(),
                 pool_vault_nonce,
+                mega_pool_state_kp.pubkey(),
+                mega_pool_vault_nonce,
             )
         })
 }

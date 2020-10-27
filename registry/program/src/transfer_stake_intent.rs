@@ -1,6 +1,8 @@
+use crate::entity::{with_entity, WithEntityRequest};
+use crate::pool::{parse_pools, PoolApi, PoolConfig};
 use serum_common::pack::Pack;
 use serum_registry::access_control;
-use serum_registry::accounts::entity::{with_entity, WithEntityRequest};
+use serum_registry::accounts::entity::StakeContext;
 use serum_registry::accounts::{Entity, Member, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_sdk::account_info::{next_account_info, AccountInfo};
@@ -36,6 +38,12 @@ pub fn handler<'a>(
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
 
+    // Pool accounts.
+    let (pool, mega_pool) = {
+        let cfg = PoolConfig::TransferStakeIntent;
+        parse_pools(cfg, acc_infos, is_mega)?
+    };
+
     // TODO: STAKING POOL ACCOUNTS HERE.
     with_entity(
         WithEntityRequest {
@@ -43,8 +51,13 @@ pub fn handler<'a>(
             registrar: registrar_acc_info,
             clock: clock_acc_info,
             program_id,
+            pool: &pool,
+            mega_pool: &mega_pool,
         },
-        &mut |entity: &mut Entity, registrar: &Registrar, clock: &Clock| {
+        &mut |entity: &mut Entity,
+              stake_ctx: &StakeContext,
+              registrar: &Registrar,
+              clock: &Clock| {
             access_control(AccessControlRequest {
                 depositor_tok_owner_acc_info,
                 depositor_tok_acc_info,
@@ -59,6 +72,7 @@ pub fn handler<'a>(
                 is_delegate,
                 entity,
                 program_id,
+                stake_ctx,
             })?;
             Member::unpack_mut(
                 &mut member_acc_info.try_borrow_mut_data()?,
@@ -77,6 +91,7 @@ pub fn handler<'a>(
                         beneficiary_acc_info,
                         entity_acc_info,
                         token_program_acc_info,
+                        stake_ctx,
                     })
                     .map_err(Into::into)
                 },
@@ -103,6 +118,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         is_delegate,
         entity,
         program_id,
+        stake_ctx,
     } = req;
 
     // Beneficiary (or delegate) authorization.
@@ -135,7 +151,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     // Only activated nodes can stake. If this amount puts us over the
     // activation threshold then allow it, since the node will be activated
     // once the funds are staked.
-    if amount + entity.activation_amount() < registrar.reward_activation_threshold {
+    if amount + entity.activation_amount(stake_ctx) < registrar.reward_activation_threshold {
         return Err(RegistryErrorCode::EntityNotActivated)?;
     }
 
@@ -148,6 +164,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
+#[inline(always)]
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: stake");
 
@@ -165,6 +182,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         token_program_acc_info,
         registrar,
         clock,
+        stake_ctx,
     } = req;
 
     // Transfer funds into the staking pool, issuing a staking pool token.
@@ -175,10 +193,12 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     // Perform transfer in accounts for bookeeping.
     {
         member.sub_stake_intent(amount, is_mega, is_delegate);
-        entity.sub_stake_intent(amount, is_mega, &registrar, &clock);
+        entity.sub_stake_intent(amount, is_mega);
+        entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);
 
-        member.add_stake(amount, is_mega, is_delegate);
-        entity.add_stake(amount, is_mega, &registrar, &clock);
+        // TODO
+        // member.add_stake(amount, is_mega, is_delegate);
+        // entity.add_stake(amount, is_mega, &registrar, &clock);
     }
 
     info!("state-transition: success");
@@ -200,6 +220,7 @@ struct AccessControlRequest<'a, 'b> {
     amount: u64,
     entity: &'b Entity,
     program_id: &'a Pubkey,
+    stake_ctx: &'b StakeContext,
 }
 
 struct StateTransitionRequest<'a, 'b> {
@@ -216,4 +237,5 @@ struct StateTransitionRequest<'a, 'b> {
     beneficiary_acc_info: &'a AccountInfo<'a>,
     entity_acc_info: &'a AccountInfo<'a>,
     token_program_acc_info: &'a AccountInfo<'a>,
+    stake_ctx: &'b StakeContext,
 }

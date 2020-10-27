@@ -167,8 +167,10 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     pending_withdrawal.mega = mega;
 
     // Bookeeping.
-    entity.transfer_pending_withdrawal(amount, mega, &registrar, &clock);
-    member.transfer_pending_withdrawal(amount, mega, delegate);
+    entity.spt_transfer_pending_withdrawal(amount, mega);
+    member.spt_transfer_pending_withdrawal(amount, mega, delegate);
+
+    // TODO: state transition with spt ctx
 
     info!("state-transition: success");
 

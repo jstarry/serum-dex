@@ -46,7 +46,6 @@ impl<'a, 'b> PoolApi<'a, 'b> {
         );
         let signer_seeds =
             vault::signer_seeds(self.registrar_acc_info.unwrap().key, &registrar_nonce);
-        info!("invoking creation");
         let mut acc_infos = vec![
             self.pool_acc_info.clone(),
             self.pool_tok_mint_acc_info.clone(),
@@ -80,7 +79,6 @@ impl<'a, 'b> PoolApi<'a, 'b> {
             self.retbuf_program_acc_info.key,
             spt_amount,
         );
-        info!("invoking get_basket");
         let mut acc_infos = vec![
             self.pool_program_id_acc_info.clone(),
             self.pool_acc_info.clone(),
@@ -105,10 +103,12 @@ pub enum PoolConfig<'a, 'b> {
         registrar_acc_info: &'a AccountInfo<'b>,
         token_program_acc_info: &'a AccountInfo<'b>,
     },
-    SwitchEntity,
-    TransferStakeIntent,
+    ReadBasket,
 }
 
+// TODO: always have pools be in order of SRM | MSRM and then just match the
+//       user account info at the end to the right poolapi.
+//       Do this on client as well.
 pub fn parse_accounts<'a, 'b>(
     cfg: PoolConfig<'a, 'b>,
     mut acc_infos: &mut dyn std::iter::Iterator<Item = &'a AccountInfo<'b>>,
@@ -151,7 +151,7 @@ pub fn parse_accounts<'a, 'b>(
     } = cfg
     {
         user_pool_tok_acc_info = Some(next_account_info(acc_infos)?);
-        // TODO: if mega then vec
+        // TODO: if mega then vec (need on client side as well)
         user_asset_tok_acc_info = Some(next_account_info(acc_infos)?);
         user_tok_auth_acc_info = Some(next_account_info(acc_infos)?);
         vault_authority_acc_info = Some(_vault_authority_acc_info);

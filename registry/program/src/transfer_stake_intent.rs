@@ -40,7 +40,7 @@ pub fn handler<'a>(
 
     // Pool accounts.
     let (stake_ctx, pool, mega_pool) = {
-        let cfg = PoolConfig::TransferStakeIntent;
+        let cfg = PoolConfig::ReadBasket;
         pool::parse_accounts(cfg, acc_infos, is_mega)?
     };
 

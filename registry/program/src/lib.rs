@@ -31,8 +31,6 @@ fn entry<'a>(
     accounts: &'a [AccountInfo<'a>],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    info!("process-instruction");
-
     let instruction: RegistryInstruction = RegistryInstruction::unpack(instruction_data)
         .map_err(|_| RegistryError::ErrorCode(RegistryErrorCode::WrongSerialization))?;
 
@@ -110,8 +108,6 @@ fn entry<'a>(
     };
 
     result?;
-
-    info!("process-instruction success");
 
     Ok(())
 }

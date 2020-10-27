@@ -5,9 +5,9 @@
 use serum_common::pack::Pack;
 use serum_lockup::error::{LockupError, LockupErrorCode};
 use serum_lockup::instruction::LockupInstruction;
+use solana_program::info;
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::entrypoint::ProgramResult;
-use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
 
 pub(crate) mod access_control;
@@ -28,8 +28,6 @@ fn entry<'a>(
     accounts: &'a [AccountInfo<'a>],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    info!("process-instruction");
-
     let instruction: LockupInstruction = LockupInstruction::unpack(instruction_data)
         .map_err(|_| LockupError::ErrorCode(LockupErrorCode::WrongSerialization))?;
 
@@ -72,8 +70,6 @@ fn entry<'a>(
     };
 
     result?;
-
-    info!("process-instruction success");
 
     Ok(())
 }

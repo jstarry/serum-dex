@@ -141,10 +141,12 @@ impl Client {
         let mut signers = vec![self.payer(), &beneficiary];
         signers.append(&mut relay_signers);
 
-        let tx = self
-            .inner
-            .whitelist_withdraw_with_signers(&signers, &accounts, delegate_amount, relay_data)
-            .unwrap();
+        let tx = self.inner.whitelist_withdraw_with_signers(
+            &signers,
+            &accounts,
+            delegate_amount,
+            relay_data,
+        )?;
 
         Ok(WhitelistWithdrawResponse { tx })
     }
@@ -313,6 +315,7 @@ impl Client {
             stake_beneficiary,
             vesting,
             safe,
+            pool_program_id,
         } = req;
         let delegate = true;
         let relay_data = {
@@ -325,28 +328,31 @@ impl Client {
             RegistryInstruction::pack(instr, &mut relay_data).unwrap();
             relay_data
         };
-        let r = {
-            let r_client = RegistryClient::new(RegistryClientInner::new(
-                registry_pid,
-                Keypair::from_bytes(&self.payer().to_bytes()).expect("invalid payer"),
-                self.inner.url(),
-                Some(self.inner.options().clone()),
-            ));
-            r_client.registrar(&registrar)?
-        };
+
+        let r_client = RegistryClient::new(RegistryClientInner::new(
+            registry_pid,
+            Keypair::from_bytes(&self.payer().to_bytes()).expect("invalid payer"),
+            self.inner.url(),
+            Some(self.inner.options().clone()),
+        ));
+        let r = r_client.registrar(&registrar)?;
+
         let whitelist_program_vault = r.vault;
         let whitelist_program_vault_authority = Pubkey::create_program_address(
             &TokenVault::signer_seeds(&registrar, &r.nonce),
             &registry_pid,
         )
         .map_err(|_| anyhow!("unable to create vault authority"))?;
-        let relay_accounts = vec![
+        let mut relay_accounts = vec![
             AccountMeta::new(member, false),
             AccountMeta::new_readonly(stake_beneficiary.pubkey(), true),
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
         ];
+        let (pool_accs, _, _) = r_client.common_pool_accounts(pool_program_id, registrar, false)?;
+        relay_accounts.extend_from_slice(&pool_accs);
+
         let resp = self.whitelist_withdraw(WhitelistWithdrawRequest {
             beneficiary,
             vesting,
@@ -377,6 +383,7 @@ impl Client {
             stake_beneficiary,
             vesting,
             safe,
+            pool_program_id,
         } = req;
         let delegate = true;
         let relay_data = {
@@ -389,28 +396,30 @@ impl Client {
             RegistryInstruction::pack(instr, &mut relay_data).unwrap();
             relay_data
         };
-        let r = {
-            let r_client = RegistryClient::new(RegistryClientInner::new(
-                registry_pid,
-                Keypair::from_bytes(&self.payer().to_bytes()).expect("invalid payer"),
-                self.inner.url(),
-                Some(self.inner.options().clone()),
-            ));
-            r_client.registrar(&registrar)?
-        };
+
+        let r_client = RegistryClient::new(RegistryClientInner::new(
+            registry_pid,
+            Keypair::from_bytes(&self.payer().to_bytes()).expect("invalid payer"),
+            self.inner.url(),
+            Some(self.inner.options().clone()),
+        ));
+        let r = r_client.registrar(&registrar)?;
+
         let whitelist_program_vault = r.vault;
         let whitelist_program_vault_authority = Pubkey::create_program_address(
             &TokenVault::signer_seeds(&registrar, &r.nonce),
             &registry_pid,
         )
         .map_err(|_| anyhow!("unable to create vault authority"))?;
-        let relay_accounts = vec![
+        let mut relay_accounts = vec![
             AccountMeta::new(member, false),
             AccountMeta::new_readonly(stake_beneficiary.pubkey(), true),
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
         ];
+        let (pool_accs, _, _) = r_client.common_pool_accounts(pool_program_id, registrar, mega)?;
+        relay_accounts.extend_from_slice(&pool_accs);
 
         let resp = self.whitelist_deposit(WhitelistDepositRequest {
             beneficiary,
@@ -652,6 +661,7 @@ pub struct LockedStakeIntentRequest<'a> {
     pub safe: Pubkey,
     pub beneficiary: &'a Keypair,
     pub stake_beneficiary: &'a Keypair,
+    pub pool_program_id: Pubkey,
 }
 
 pub struct LockedStakeIntentResponse {
@@ -669,6 +679,7 @@ pub struct LockedStakeIntentWithdrawalRequest<'a> {
     pub safe: Pubkey,
     pub beneficiary: &'a Keypair,
     pub stake_beneficiary: &'a Keypair,
+    pub pool_program_id: Pubkey,
 }
 
 pub struct LockedStakeIntentWithdrawalResponse {

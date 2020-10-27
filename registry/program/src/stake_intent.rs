@@ -1,9 +1,11 @@
+use crate::pool::{self, PoolConfig};
 use serum_common::pack::Pack;
 use serum_registry::access_control;
+use serum_registry::accounts::entity::StakeContext;
 use serum_registry::accounts::{vault, Entity, Member, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::sysvar::clock::Clock;
 
@@ -35,7 +37,12 @@ pub fn handler<'a>(
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
 
-    access_control(AccessControlRequest {
+    let (stake_ctx, pool, mega_pool) = {
+        let cfg = PoolConfig::ReadBasket;
+        pool::parse_accounts(cfg, acc_infos, false)?
+    };
+
+    let AccessControlResponse { registrar, clock } = access_control(AccessControlRequest {
         delegate_owner_acc_info,
         tok_authority_acc_info,
         depositor_tok_acc_info,
@@ -46,6 +53,7 @@ pub fn handler<'a>(
         token_program_acc_info,
         is_delegate,
         is_mega,
+        clock_acc_info,
         program_id,
         registrar_acc_info,
     })?;
@@ -56,14 +64,12 @@ pub fn handler<'a>(
             Member::unpack_mut(
                 &mut member_acc_info.try_borrow_mut_data()?,
                 &mut |member: &mut Member| {
-                    let clock = access_control::clock(clock_acc_info)?;
-                    let registrar = Registrar::unpack(&registrar_acc_info.try_borrow_data()?)?;
                     state_transition(StateTransitionRequest {
                         entity,
                         member,
                         amount,
-                        registrar,
-                        clock,
+                        registrar: &registrar,
+                        clock: &clock,
                         registrar_acc_info,
                         vault_acc_info,
                         tok_authority_acc_info,
@@ -73,6 +79,7 @@ pub fn handler<'a>(
                         token_program_acc_info,
                         is_delegate,
                         is_mega,
+                        stake_ctx: &stake_ctx,
                     })
                     .map_err(Into::into)
                 },
@@ -83,7 +90,7 @@ pub fn handler<'a>(
     Ok(())
 }
 
-fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
+fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, RegistryError> {
     info!("access-control: stake_intent");
 
     let AccessControlRequest {
@@ -99,6 +106,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         program_id,
         is_delegate,
         is_mega,
+        clock_acc_info,
     } = req;
 
     // Beneficiary authorization.
@@ -120,6 +128,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     }
 
     // Account validation.
+    let clock = access_control::clock(clock_acc_info)?;
     let registrar = access_control::registrar(registrar_acc_info, program_id)?;
     let _ = access_control::entity(entity_acc_info, registrar_acc_info, program_id)?;
     let member = access_control::member(
@@ -151,9 +160,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
 
     // StakeIntent specific: None.
 
-    info!("access-control: success");
-
-    Ok(())
+    Ok(AccessControlResponse { registrar, clock })
 }
 
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
@@ -174,11 +181,11 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         token_program_acc_info,
         is_delegate,
         is_mega,
+        stake_ctx,
     } = req;
 
     // Transfer funds into the stake intent vault.
     {
-        info!("invoking token transfer");
         let withdraw_instruction = spl_token::instruction::transfer(
             &spl_token::ID,
             depositor_tok_acc_info.key,
@@ -209,11 +216,9 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     }
 
     member.add_stake_intent(amount, is_mega, is_delegate);
+
     entity.add_stake_intent(amount, is_mega);
-
-    // todo: transition state here
-
-    info!("state-transition: success");
+    entity.transition_activation_if_needed(stake_ctx, registrar, clock);
 
     Ok(())
 }
@@ -229,8 +234,14 @@ struct AccessControlRequest<'a> {
     entity_acc_info: &'a AccountInfo<'a>,
     token_program_acc_info: &'a AccountInfo<'a>,
     vault_acc_info: &'a AccountInfo<'a>,
+    clock_acc_info: &'a AccountInfo<'a>,
     is_delegate: bool,
     is_mega: bool,
+}
+
+struct AccessControlResponse {
+    clock: Clock,
+    registrar: Registrar,
 }
 
 struct StateTransitionRequest<'a, 'b> {
@@ -238,8 +249,8 @@ struct StateTransitionRequest<'a, 'b> {
     member: &'b mut Member,
     is_mega: bool,
     is_delegate: bool,
-    registrar: Registrar,
-    clock: Clock,
+    registrar: &'b Registrar,
+    clock: &'b Clock,
     amount: u64,
     registrar_acc_info: &'a AccountInfo<'a>,
     vault_acc_info: &'a AccountInfo<'a>,
@@ -248,4 +259,5 @@ struct StateTransitionRequest<'a, 'b> {
     member_acc_info: &'a AccountInfo<'a>,
     entity_acc_info: &'a AccountInfo<'a>,
     token_program_acc_info: &'a AccountInfo<'a>,
+    stake_ctx: &'b StakeContext,
 }

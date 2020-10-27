@@ -26,7 +26,7 @@ pub fn handler<'a>(
     let clock_acc_info = next_account_info(acc_infos)?;
 
     let (stake_ctx, pool, mega_pool) = {
-        let cfg = PoolConfig::SwitchEntity;
+        let cfg = PoolConfig::ReadBasket;
         pool::parse_accounts(cfg, acc_infos, false)?
     };
 

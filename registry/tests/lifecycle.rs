@@ -228,6 +228,7 @@ fn lifecycle() {
                 mega: false,
                 registrar,
                 amount: stake_intent_amount,
+                pool_program_id: stake_pid,
             })
             .unwrap();
         let vault = client.stake_intent_vault(&registrar).unwrap();
@@ -247,6 +248,7 @@ fn lifecycle() {
                 mega: false,
                 registrar,
                 amount: stake_intent_amount,
+                pool_program_id: stake_pid,
             })
             .unwrap();
         let vault = client.stake_intent_vault(&registrar).unwrap();
@@ -270,6 +272,7 @@ fn lifecycle() {
                 stake_beneficiary: &beneficiary,
                 vesting,
                 safe,
+                pool_program_id: stake_pid,
             })
             .unwrap();
         let vault = client.stake_intent_vault(&registrar).unwrap();
@@ -292,6 +295,7 @@ fn lifecycle() {
                 stake_beneficiary: &beneficiary,
                 vesting,
                 safe,
+                pool_program_id: stake_pid,
             })
             .unwrap();
         let vault = client.stake_intent_vault(&registrar).unwrap();

@@ -163,10 +163,11 @@ impl Client {
             mega,
             registrar,
             amount,
+            pool_program_id,
         } = req;
         let vault = self.registrar(&registrar)?.vault;
         let delegate = false;
-        let accounts = [
+        let mut accounts = vec![
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
             AccountMeta::new(depositor, false),
             AccountMeta::new(vault, false),
@@ -178,6 +179,8 @@ impl Client {
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
         ];
+        let (pool_accs, _, _) = self.common_pool_accounts(pool_program_id, registrar, false)?;
+        accounts.extend_from_slice(&pool_accs);
         let signers = [self.payer(), beneficiary, depositor_authority];
 
         let tx = self
@@ -199,12 +202,13 @@ impl Client {
             mega,
             registrar,
             amount,
+            pool_program_id,
         } = req;
         let r = self.registrar(&registrar)?;
         let vault = r.vault;
         let vault_acc = rpc::get_token_account::<TokenAccount>(self.inner.rpc(), &r.vault)?;
         let delegate = false;
-        let accounts = [
+        let mut accounts = vec![
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
             AccountMeta::new(depositor, false),
             AccountMeta::new(vault, false),
@@ -216,6 +220,8 @@ impl Client {
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
         ];
+        let (pool_accs, _, _) = self.common_pool_accounts(pool_program_id, registrar, mega)?;
+        accounts.extend_from_slice(&pool_accs);
         let signers = [self.payer(), beneficiary];
 
         let tx = self
@@ -243,10 +249,10 @@ impl Client {
             .stake_pool_accounts(
                 pool_program_id,
                 registrar,
+                mega,
                 depositor,
                 depositor_pool_token,
                 depositor_authority,
-                mega,
             )?;
 
         let mut accounts = vec![
@@ -272,7 +278,7 @@ impl Client {
             &accounts,
             pool_token_amount,
             mega,
-            false, // delegate
+            false, // Not a delegate.
         )?;
 
         Ok(StakeResponse {
@@ -299,13 +305,10 @@ impl Client {
         Ok(DonateResponse {})
     }
 
-    fn stake_pool_accounts(
+    pub fn common_pool_accounts(
         &self,
         pool_program_id: Pubkey,
         registrar: Pubkey,
-        depositor: Pubkey,
-        depositor_pool_token: Option<Pubkey>,
-        depositor_authority: &Keypair,
         mega: bool,
     ) -> Result<(Vec<AccountMeta>, Pubkey, Pubkey), ClientError> {
         let r = self.registrar(&registrar)?;
@@ -371,6 +374,29 @@ impl Client {
             }
         };
 
+        // Create the pool token account (to issue tokens) if none was provided.
+
+        let mut pids_pool = vec![
+            AccountMeta::new_readonly(pool_program_id, false),
+            AccountMeta::new_readonly(spl_shared_memory::ID, false),
+        ];
+        let mut accounts = vec![];
+        accounts.append(&mut pids_pool);
+        accounts.append(&mut main_pool);
+        accounts.append(&mut alt_pool);
+        Ok((accounts, main_pool_asset_vault, main_pool_mint))
+    }
+    pub fn stake_pool_accounts(
+        &self,
+        pool_program_id: Pubkey,
+        registrar: Pubkey,
+        mega: bool,
+        depositor: Pubkey,
+        depositor_pool_token: Option<Pubkey>,
+        depositor_authority: &Keypair,
+    ) -> Result<(Vec<AccountMeta>, Pubkey, Pubkey), ClientError> {
+        let (mut accounts, main_pool_asset_vault, main_pool_mint) =
+            self.common_pool_accounts(pool_program_id, registrar, mega)?;
         let depositor_pool_token = {
             if let Some(dpt) = depositor_pool_token {
                 dpt
@@ -384,24 +410,13 @@ impl Client {
                 .pubkey()
             }
         };
-
-        // Create the pool token account (to issue tokens) if none was provided.
-
-        let mut pids_pool = vec![
-            AccountMeta::new_readonly(pool_program_id, false),
-            AccountMeta::new_readonly(spl_shared_memory::ID, false),
-        ];
-        let mut stake_specific = vec![
+        // Stake specific accounts.
+        accounts.extend_from_slice(&[
             AccountMeta::new(depositor_pool_token, false),
-            // TODO: if mega then vec
+            // TODO: if mega then vec (need on program side as well)
             AccountMeta::new(depositor, false),
             AccountMeta::new_readonly(depositor_authority.pubkey(), true),
-        ];
-        let mut accounts = vec![];
-        accounts.append(&mut pids_pool);
-        accounts.append(&mut main_pool);
-        accounts.append(&mut alt_pool);
-        accounts.append(&mut stake_specific);
+        ]);
 
         Ok((accounts, main_pool_asset_vault, depositor_pool_token))
     }
@@ -576,6 +591,7 @@ pub struct StakeIntentRequest<'a> {
     pub mega: bool,
     pub registrar: Pubkey,
     pub amount: u64,
+    pub pool_program_id: Pubkey,
 }
 
 pub struct StakeIntentResponse {
@@ -590,6 +606,7 @@ pub struct StakeIntentWithdrawalRequest<'a> {
     pub mega: bool,
     pub registrar: Pubkey,
     pub amount: u64,
+    pub pool_program_id: Pubkey,
 }
 
 pub struct StakeIntentWithdrawalResponse {

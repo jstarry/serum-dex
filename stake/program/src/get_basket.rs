@@ -36,10 +36,11 @@ pub fn handler(
         accounts: vec![AccountMeta::new(*retbuf_accs.account.key, false)],
         data,
     };
-    info!("invoking retbuf");
+
     solana_sdk::program::invoke(
         &instr,
         &[retbuf_accs.account.clone(), retbuf_accs.program.clone()],
     )?;
+
     Ok(basket)
 }

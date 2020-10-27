@@ -106,9 +106,6 @@ pub enum PoolConfig<'a, 'b> {
     ReadBasket,
 }
 
-// TODO: always have pools be in order of SRM | MSRM and then just match the
-//       user account info at the end to the right poolapi.
-//       Do this on client as well.
 pub fn parse_accounts<'a, 'b>(
     cfg: PoolConfig<'a, 'b>,
     mut acc_infos: &mut dyn std::iter::Iterator<Item = &'a AccountInfo<'b>>,
@@ -119,24 +116,22 @@ pub fn parse_accounts<'a, 'b>(
     // Program ids.
     let pool_program_id_acc_info = next_account_info(acc_infos)?;
     let retbuf_program_acc_info = next_account_info(acc_infos)?;
-    // Main pool (for instruction).
+
+    // SRM pool.
     let pool_acc_info = next_account_info(acc_infos)?;
     let pool_tok_mint_acc_info = next_account_info(acc_infos)?;
-    let mut pool_asset_vault_acc_infos = vec![next_account_info(acc_infos)?];
-    if is_mega {
-        pool_asset_vault_acc_infos.push(next_account_info(acc_infos)?);
-    }
+    let pool_asset_vault_acc_infos = vec![next_account_info(acc_infos)?];
     let pool_vault_authority_acc_info = next_account_info(acc_infos)?;
     let retbuf_acc_info = next_account_info(acc_infos)?;
-    // Alt pool.
-    let alt_pool_acc_info = next_account_info(acc_infos)?;
-    let alt_pool_tok_mint_acc_info = next_account_info(acc_infos)?;
-    let mut alt_pool_asset_vault_acc_infos = vec![next_account_info(acc_infos)?];
-    if !is_mega {
-        alt_pool_asset_vault_acc_infos.push(next_account_info(acc_infos)?);
-    }
-    let alt_pool_vault_authority_acc_info = next_account_info(acc_infos)?;
-    let alt_retbuf_acc_info = next_account_info(acc_infos)?;
+
+    // MSRM pool.
+    let mega_pool_acc_info = next_account_info(acc_infos)?;
+    let mega_pool_tok_mint_acc_info = next_account_info(acc_infos)?;
+    let mut mega_pool_asset_vault_acc_infos = vec![next_account_info(acc_infos)?];
+    mega_pool_asset_vault_acc_infos.push(next_account_info(acc_infos)?);
+    let mega_pool_vault_authority_acc_info = next_account_info(acc_infos)?;
+    let mega_retbuf_acc_info = next_account_info(acc_infos)?;
+
     // Instruction specific params.
     let mut user_pool_tok_acc_info = None;
     let mut user_asset_tok_acc_info = None;
@@ -160,40 +155,70 @@ pub fn parse_accounts<'a, 'b>(
     }
 
     let (pool, mega_pool) = {
-        let pool = PoolApi {
-            pool_program_id_acc_info,
-            pool_acc_info,
-            pool_tok_mint_acc_info,
-            pool_asset_vault_acc_infos,
-            pool_vault_authority_acc_info,
-            retbuf_acc_info,
-            retbuf_program_acc_info,
-            user_pool_tok_acc_info,
-            user_asset_tok_acc_info,
-            user_tok_auth_acc_info,
-            vault_authority_acc_info,
-            registrar_acc_info,
-            token_program_acc_info,
-        };
-        let alt_pool = PoolApi {
-            pool_program_id_acc_info: pool_program_id_acc_info,
-            pool_acc_info: alt_pool_acc_info,
-            pool_tok_mint_acc_info: alt_pool_tok_mint_acc_info,
-            pool_asset_vault_acc_infos: alt_pool_asset_vault_acc_infos,
-            pool_vault_authority_acc_info: alt_pool_vault_authority_acc_info,
-            retbuf_acc_info: alt_retbuf_acc_info,
-            retbuf_program_acc_info: retbuf_program_acc_info,
-            user_pool_tok_acc_info: None,
-            user_asset_tok_acc_info: None,
-            user_tok_auth_acc_info: None,
-            vault_authority_acc_info: None,
-            registrar_acc_info: None,
-            token_program_acc_info: None,
-        };
         if is_mega {
-            (alt_pool, pool)
+            let pool = PoolApi {
+                pool_program_id_acc_info,
+                pool_acc_info,
+                pool_tok_mint_acc_info,
+                pool_asset_vault_acc_infos,
+                pool_vault_authority_acc_info,
+                retbuf_acc_info,
+                retbuf_program_acc_info,
+                user_pool_tok_acc_info: None,
+                user_asset_tok_acc_info: None,
+                user_tok_auth_acc_info: None,
+                vault_authority_acc_info: None,
+                registrar_acc_info: None,
+                token_program_acc_info: None,
+            };
+            let mega_pool = PoolApi {
+                pool_program_id_acc_info: pool_program_id_acc_info,
+                pool_acc_info: mega_pool_acc_info,
+                pool_tok_mint_acc_info: mega_pool_tok_mint_acc_info,
+                pool_asset_vault_acc_infos: mega_pool_asset_vault_acc_infos,
+                pool_vault_authority_acc_info: mega_pool_vault_authority_acc_info,
+                retbuf_acc_info: mega_retbuf_acc_info,
+                retbuf_program_acc_info: retbuf_program_acc_info,
+                user_pool_tok_acc_info,
+                user_asset_tok_acc_info,
+                user_tok_auth_acc_info,
+                vault_authority_acc_info,
+                registrar_acc_info,
+                token_program_acc_info,
+            };
+            (pool, mega_pool)
         } else {
-            (pool, alt_pool)
+            let pool = PoolApi {
+                pool_program_id_acc_info,
+                pool_acc_info,
+                pool_tok_mint_acc_info,
+                pool_asset_vault_acc_infos,
+                pool_vault_authority_acc_info,
+                retbuf_acc_info,
+                retbuf_program_acc_info,
+                user_pool_tok_acc_info,
+                user_asset_tok_acc_info,
+                user_tok_auth_acc_info,
+                vault_authority_acc_info,
+                registrar_acc_info,
+                token_program_acc_info,
+            };
+            let mega_pool = PoolApi {
+                pool_program_id_acc_info: pool_program_id_acc_info,
+                pool_acc_info: mega_pool_acc_info,
+                pool_tok_mint_acc_info: mega_pool_tok_mint_acc_info,
+                pool_asset_vault_acc_infos: mega_pool_asset_vault_acc_infos,
+                pool_vault_authority_acc_info: mega_pool_vault_authority_acc_info,
+                retbuf_acc_info: mega_retbuf_acc_info,
+                retbuf_program_acc_info: retbuf_program_acc_info,
+                user_pool_tok_acc_info: None,
+                user_asset_tok_acc_info: None,
+                user_tok_auth_acc_info: None,
+                vault_authority_acc_info: None,
+                registrar_acc_info: None,
+                token_program_acc_info: None,
+            };
+            (pool, mega_pool)
         }
     };
 

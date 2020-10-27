@@ -312,65 +312,66 @@ impl Client {
         mega: bool,
     ) -> Result<(Vec<AccountMeta>, Pubkey, Pubkey), ClientError> {
         let r = self.registrar(&registrar)?;
-        let (mut main_pool, main_pool_asset_vault, main_pool_mint, mut alt_pool) = {
-            let (pool, pool_asset_vault, pool_mint) = {
-                let pool_state = self.stake_pool(&registrar)?;
-                assert!(pool_state.assets.len() == 1);
-                let pool_asset_vault = pool_state.assets[0].clone().vault_address.into();
-                let retbuf = {
-                    let dummy_basket = Basket {
-                        quantities: vec![0],
-                    };
-                    rpc::create_account_rent_exempt(
-                        self.rpc(),
-                        self.payer(),
-                        dummy_basket.size().expect("always serializes") as usize,
-                        &spl_shared_memory::ID,
-                    )?
-                    .pubkey()
+        let (mut pool, pool_asset_vault, pool_mint) = {
+            let pool_state = self.stake_pool(&registrar)?;
+            assert!(pool_state.assets.len() == 1);
+            let pool_asset_vault = pool_state.assets[0].clone().vault_address.into();
+            let retbuf = {
+                let dummy_basket = Basket {
+                    quantities: vec![0],
                 };
-                let pool_tok_mint = pool_state.pool_token_mint.into();
-                let accs = vec![
-                    AccountMeta::new(r.pool, false),
-                    AccountMeta::new(pool_tok_mint, false),
-                    AccountMeta::new(pool_asset_vault, false),
-                    AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
-                    AccountMeta::new(retbuf, false),
-                ];
-                (accs, pool_asset_vault, pool_tok_mint)
+                rpc::create_account_rent_exempt(
+                    self.rpc(),
+                    self.payer(),
+                    dummy_basket.size().expect("always serializes") as usize,
+                    &spl_shared_memory::ID,
+                )?
+                .pubkey()
             };
-            let (mega_pool, mega_pool_asset_vault, mega_pool_mint) = {
-                let pool_state = self.stake_mega_pool(&registrar)?;
-                assert!(pool_state.assets.len() == 2);
-                let pool_asset_vault_1 = pool_state.assets[0].clone().vault_address.into();
-                let pool_asset_vault_2 = pool_state.assets[1].clone().vault_address.into();
-                let retbuf = {
-                    let dummy_basket = Basket {
-                        quantities: vec![0, 0],
-                    };
-                    rpc::create_account_rent_exempt(
-                        self.rpc(),
-                        self.payer(),
-                        dummy_basket.size().expect("always serializes") as usize,
-                        &spl_shared_memory::ID,
-                    )?
-                    .pubkey()
+            let pool_tok_mint = pool_state.pool_token_mint.into();
+            let accs = vec![
+                AccountMeta::new(r.pool, false),
+                AccountMeta::new(pool_tok_mint, false),
+                AccountMeta::new(pool_asset_vault, false),
+                AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
+                AccountMeta::new(retbuf, false),
+            ];
+            (accs, pool_asset_vault, pool_tok_mint)
+        };
+        let (mut mega_pool, mega_pool_asset_vault, mega_pool_mint) = {
+            let pool_state = self.stake_mega_pool(&registrar)?;
+            assert!(pool_state.assets.len() == 2);
+            let pool_asset_vault_1 = pool_state.assets[0].clone().vault_address.into();
+            let pool_asset_vault_2 = pool_state.assets[1].clone().vault_address.into();
+            let retbuf = {
+                let dummy_basket = Basket {
+                    quantities: vec![0, 0],
                 };
-                let pool_tok_mint = pool_state.pool_token_mint.into();
-                let accs = vec![
-                    AccountMeta::new(r.mega_pool, false),
-                    AccountMeta::new(pool_tok_mint, false),
-                    AccountMeta::new(pool_asset_vault_1, false),
-                    AccountMeta::new(pool_asset_vault_2, false),
-                    AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
-                    AccountMeta::new(retbuf, false),
-                ];
-                (accs, pool_asset_vault_1, pool_tok_mint)
+                rpc::create_account_rent_exempt(
+                    self.rpc(),
+                    self.payer(),
+                    dummy_basket.size().expect("always serializes") as usize,
+                    &spl_shared_memory::ID,
+                )?
+                .pubkey()
             };
+            let pool_tok_mint = pool_state.pool_token_mint.into();
+            let accs = vec![
+                AccountMeta::new(r.mega_pool, false),
+                AccountMeta::new(pool_tok_mint, false),
+                AccountMeta::new(pool_asset_vault_1, false),
+                AccountMeta::new(pool_asset_vault_2, false),
+                AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
+                AccountMeta::new(retbuf, false),
+            ];
+            (accs, pool_asset_vault_1, pool_tok_mint)
+        };
+
+        let (main_pool_asset_vault, main_pool_mint) = {
             if mega {
-                (mega_pool, mega_pool_asset_vault, mega_pool_mint, pool)
+                (mega_pool_asset_vault, mega_pool_mint)
             } else {
-                (pool, pool_asset_vault, pool_mint, mega_pool)
+                (pool_asset_vault, pool_mint)
             }
         };
 
@@ -382,8 +383,8 @@ impl Client {
         ];
         let mut accounts = vec![];
         accounts.append(&mut pids_pool);
-        accounts.append(&mut main_pool);
-        accounts.append(&mut alt_pool);
+        accounts.append(&mut pool);
+        accounts.append(&mut mega_pool);
         Ok((accounts, main_pool_asset_vault, main_pool_mint))
     }
     pub fn stake_pool_accounts(

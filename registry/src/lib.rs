@@ -158,7 +158,7 @@ pub mod instruction {
         ///
         /// Same as StakeIntent, substituting Accounts[1] for the pool's vault.
         ///
-        /// TODO: append pool specific accounts once we know the interface.
+        // TODO: use vecs properly for MSRM staking.
         Stake {
             amount: u64,
             mega: bool,

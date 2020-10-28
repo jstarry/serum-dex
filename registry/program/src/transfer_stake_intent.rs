@@ -25,7 +25,6 @@ pub fn handler<'a>(
 
     let delegate_owner_acc_info = next_account_info(acc_infos)?;
     let depositor_tok_acc_info = next_account_info(acc_infos)?;
-    let _pool_vault_acc_info = next_account_info(acc_infos)?;
     let tok_authority_acc_info = next_account_info(acc_infos)?;
     let token_program_acc_info = next_account_info(acc_infos)?;
 

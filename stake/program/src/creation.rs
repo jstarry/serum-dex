@@ -56,7 +56,6 @@ pub fn handler(
 
     // Transfer `amount` of the state.assets[0] into the pool's vault.
     {
-        info!("invoking token transfer");
         let transfer_instr = token_instruction::transfer(
             &spl_token::ID,
             user_token_acc_info.key,

@@ -42,11 +42,11 @@ pub fn initialize(
 
     let pool_state_kp = Keypair::generate(&mut OsRng);
     let (pool_vault_authority, pool_vault_nonce) =
-        Pubkey::find_program_address(&[&[]], pool_program_id);
+        Pubkey::find_program_address(&[pool_state_kp.pubkey().as_ref()], pool_program_id);
 
     let mega_pool_state_kp = Keypair::generate(&mut OsRng);
     let (mega_pool_vault_authority, mega_pool_vault_nonce) =
-        Pubkey::find_program_address(&[&[]], pool_program_id);
+        Pubkey::find_program_address(&[mega_pool_state_kp.pubkey().as_ref()], pool_program_id);
 
     // Now build the final transaction.
     let instructions = {

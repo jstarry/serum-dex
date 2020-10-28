@@ -114,7 +114,6 @@ impl Client {
             safe,
             whitelist_program,
             mut relay_accounts,
-            whitelist_program_vault,
             whitelist_program_vault_authority,
             delegate_amount,
             relay_data,
@@ -127,12 +126,11 @@ impl Client {
             AccountMeta::new_readonly(beneficiary.pubkey(), true),
             AccountMeta::new(vesting, false),
             AccountMeta::new_readonly(safe, false),
-            AccountMeta::new_readonly(self.vault_authority(safe)?, false),
             AccountMeta::new_readonly(whitelist_program, false),
             AccountMeta::new_readonly(whitelist, false),
             // Below are relay accounts.
+            AccountMeta::new_readonly(self.vault_authority(safe)?, false),
             AccountMeta::new(vault, false),
-            AccountMeta::new(whitelist_program_vault, false),
             AccountMeta::new_readonly(whitelist_program_vault_authority, false),
             AccountMeta::new_readonly(spl_token::ID, false),
         ];
@@ -160,7 +158,6 @@ impl Client {
             vesting,
             safe,
             whitelist_program,
-            whitelist_program_vault,
             whitelist_program_vault_authority,
             relay_data,
             mut relay_accounts,
@@ -173,12 +170,11 @@ impl Client {
             AccountMeta::new_readonly(beneficiary.pubkey(), true),
             AccountMeta::new(vesting, false),
             AccountMeta::new_readonly(safe, false),
-            AccountMeta::new_readonly(self.vault_authority(safe)?, false),
             AccountMeta::new_readonly(whitelist_program, false),
             AccountMeta::new_readonly(whitelist, false),
             // Below are relay accounts.
+            AccountMeta::new_readonly(self.vault_authority(safe)?, false),
             AccountMeta::new(vault, false),
-            AccountMeta::new(whitelist_program_vault, false),
             AccountMeta::new_readonly(whitelist_program_vault_authority, false),
             AccountMeta::new_readonly(spl_token::ID, false),
         ];
@@ -336,8 +332,6 @@ impl Client {
             Some(self.inner.options().clone()),
         ));
         let r = r_client.registrar(&registrar)?;
-
-        let whitelist_program_vault = r.vault;
         let whitelist_program_vault_authority = Pubkey::create_program_address(
             &TokenVault::signer_seeds(&registrar, &r.nonce),
             &registry_pid,
@@ -349,8 +343,9 @@ impl Client {
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new(r.vault, false),
         ];
-        let (pool_accs, _, _) = r_client.common_pool_accounts(pool_program_id, registrar, false)?;
+        let (pool_accs, _) = r_client.common_pool_accounts(pool_program_id, registrar, false)?;
         relay_accounts.extend_from_slice(&pool_accs);
 
         let resp = self.whitelist_withdraw(WhitelistWithdrawRequest {
@@ -359,7 +354,6 @@ impl Client {
             safe,
             whitelist_program: registry_pid,
             relay_accounts,
-            whitelist_program_vault,
             whitelist_program_vault_authority,
             delegate_amount: amount,
             relay_data,
@@ -404,8 +398,6 @@ impl Client {
             Some(self.inner.options().clone()),
         ));
         let r = r_client.registrar(&registrar)?;
-
-        let whitelist_program_vault = r.vault;
         let whitelist_program_vault_authority = Pubkey::create_program_address(
             &TokenVault::signer_seeds(&registrar, &r.nonce),
             &registry_pid,
@@ -417,8 +409,9 @@ impl Client {
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new(r.vault, false),
         ];
-        let (pool_accs, _, _) = r_client.common_pool_accounts(pool_program_id, registrar, mega)?;
+        let (pool_accs, _) = r_client.common_pool_accounts(pool_program_id, registrar, mega)?;
         relay_accounts.extend_from_slice(&pool_accs);
 
         let resp = self.whitelist_deposit(WhitelistDepositRequest {
@@ -426,7 +419,6 @@ impl Client {
             vesting,
             safe,
             whitelist_program: registry_pid,
-            whitelist_program_vault,
             whitelist_program_vault_authority,
             relay_data,
             relay_accounts,
@@ -574,7 +566,6 @@ pub struct WhitelistWithdrawRequest<'a> {
     pub safe: Pubkey,
     pub whitelist_program: Pubkey,
     pub relay_accounts: Vec<AccountMeta>,
-    pub whitelist_program_vault: Pubkey,
     pub whitelist_program_vault_authority: Pubkey,
     pub delegate_amount: u64,
     pub relay_data: Vec<u8>,
@@ -591,7 +582,6 @@ pub struct WhitelistDepositRequest<'a> {
     pub vesting: Pubkey,
     pub safe: Pubkey,
     pub whitelist_program: Pubkey,
-    pub whitelist_program_vault: Pubkey,
     pub whitelist_program_vault_authority: Pubkey,
     pub relay_accounts: Vec<AccountMeta>,
     pub relay_data: Vec<u8>,

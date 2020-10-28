@@ -163,11 +163,13 @@ fn lifecycle() {
             vesting,
             safe: safe_acc,
             whitelist_program: staking_program_id,
-            whitelist_program_vault: stake_init.vault,
             whitelist_program_vault_authority: stake_init.vault_authority,
             delegate_amount: stake_amount,
             relay_data,
-            relay_accounts: vec![AccountMeta::new(stake_init.instance, false)],
+            relay_accounts: vec![
+                AccountMeta::new(stake_init.instance, false),
+                AccountMeta::new(stake_init.vault, false),
+            ],
             relay_signers: vec![],
         });
 

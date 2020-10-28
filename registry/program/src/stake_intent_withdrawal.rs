@@ -21,12 +21,9 @@ pub fn handler<'a>(
     let acc_infos = &mut accounts.iter();
 
     // Lockup whitelist relay interface.
-
     let delegate_owner_acc_info = next_account_info(acc_infos)?;
     let depositor_tok_acc_info = next_account_info(acc_infos)?;
-    let vault_acc_info = next_account_info(acc_infos)?;
-    // Owner or delegate.
-    let vault_authority_acc_info = next_account_info(acc_infos)?;
+    let tok_authority_acc_info = next_account_info(acc_infos)?;
     let token_program_acc_info = next_account_info(acc_infos)?;
 
     // Program specfic.
@@ -35,6 +32,7 @@ pub fn handler<'a>(
     let entity_acc_info = next_account_info(acc_infos)?;
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
+    let vault_acc_info = next_account_info(acc_infos)?;
 
     let (stake_ctx, _pool) = {
         let cfg = PoolConfig::ReadBasket;
@@ -43,7 +41,7 @@ pub fn handler<'a>(
 
     let AccessControlResponse { clock, registrar } = access_control(AccessControlRequest {
         delegate_owner_acc_info,
-        vault_authority_acc_info,
+        tok_authority_acc_info,
         depositor_tok_acc_info,
         member_acc_info,
         beneficiary_acc_info,
@@ -72,7 +70,7 @@ pub fn handler<'a>(
                         clock: &clock,
                         registrar_acc_info,
                         vault_acc_info,
-                        vault_authority_acc_info,
+                        tok_authority_acc_info,
                         depositor_tok_acc_info,
                         member_acc_info,
                         beneficiary_acc_info,
@@ -96,7 +94,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
 
     let AccessControlRequest {
         delegate_owner_acc_info,
-        vault_authority_acc_info,
+        tok_authority_acc_info,
         depositor_tok_acc_info,
         member_acc_info,
         beneficiary_acc_info,
@@ -141,7 +139,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         is_mega,
     )?;
     // Match the vault authority to the vault.
-    if vault.owner != *vault_authority_acc_info.key {
+    if vault.owner != *tok_authority_acc_info.key {
         return Err(RegistryErrorCode::InvalidVaultAuthority)?;
     }
     if is_delegate {
@@ -171,7 +169,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         registrar,
         clock,
         registrar_acc_info,
-        vault_authority_acc_info,
+        tok_authority_acc_info,
         depositor_tok_acc_info,
         vault_acc_info,
         member_acc_info,
@@ -189,7 +187,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
             &spl_token::ID,
             vault_acc_info.key,
             depositor_tok_acc_info.key,
-            vault_authority_acc_info.key,
+            tok_authority_acc_info.key,
             &[],
             amount,
         )?;
@@ -199,7 +197,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
             &[
                 vault_acc_info.clone(),
                 depositor_tok_acc_info.clone(),
-                vault_authority_acc_info.clone(),
+                tok_authority_acc_info.clone(),
                 token_program_acc_info.clone(),
             ],
             &[&signer_seeds],
@@ -220,7 +218,7 @@ struct AccessControlRequest<'a> {
     delegate_owner_acc_info: &'a AccountInfo<'a>,
     registrar_acc_info: &'a AccountInfo<'a>,
     program_id: &'a Pubkey,
-    vault_authority_acc_info: &'a AccountInfo<'a>,
+    tok_authority_acc_info: &'a AccountInfo<'a>,
     depositor_tok_acc_info: &'a AccountInfo<'a>,
     member_acc_info: &'a AccountInfo<'a>,
     beneficiary_acc_info: &'a AccountInfo<'a>,
@@ -248,7 +246,7 @@ struct StateTransitionRequest<'a, 'b> {
     amount: u64,
     registrar_acc_info: &'a AccountInfo<'a>,
     vault_acc_info: &'a AccountInfo<'a>,
-    vault_authority_acc_info: &'a AccountInfo<'a>,
+    tok_authority_acc_info: &'a AccountInfo<'a>,
     depositor_tok_acc_info: &'a AccountInfo<'a>,
     member_acc_info: &'a AccountInfo<'a>,
     beneficiary_acc_info: &'a AccountInfo<'a>,

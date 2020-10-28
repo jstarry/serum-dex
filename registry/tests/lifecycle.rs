@@ -44,6 +44,7 @@ fn lifecycle() {
         registrar,
         nonce,
         pool_vault_signer_nonce,
+        pool,
         ..
     } = client
         .initialize(InitializeRequest {
@@ -88,14 +89,15 @@ fn lifecycle() {
                 entry: WhitelistEntry::new(*client.program(), Some(registrar), nonce),
             })
             .unwrap();
-        // Whitelist the staking pool.
+        // Whitelist the two staking pools.
         l_client
             .whitelist_add(WhitelistAddRequest {
                 authority: l_client.payer(),
                 safe: init_resp.safe,
-                entry: WhitelistEntry::new(stake_pid, None, pool_vault_signer_nonce),
+                entry: WhitelistEntry::new(stake_pid, Some(pool), pool_vault_signer_nonce),
             })
             .unwrap();
+        // TODO: whitelist the msrm pool.
         // Create vesting.
         let current_ts = client
             .rpc()

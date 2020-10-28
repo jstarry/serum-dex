@@ -7,10 +7,10 @@
 use serum_common::pack::*;
 use serum_lockup_test_stake::accounts;
 use serum_lockup_test_stake::instruction::StakeInstruction;
-use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::entrypoint::ProgramResult;
 #[cfg(feature = "program")]
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
+use solana_sdk::entrypoint::ProgramResult;
 use solana_sdk::pubkey::Pubkey;
 
 #[cfg(feature = "program")]
@@ -60,15 +60,15 @@ mod handlers {
         info!("handler: stake");
         let acc_infos = &mut accounts.iter();
 
-        // Registry relay.
+        // Whitelist withdrawal interface.
         let delegate_owner_acc_info = next_account_info(acc_infos)?;
         let token_acc_info = next_account_info(acc_infos)?;
-        let vault_acc_info = next_account_info(acc_infos)?;
         let vault_authority_acc_info = next_account_info(acc_infos)?;
         let token_program_acc_info = next_account_info(acc_infos)?;
 
         // Program specific.
         let wl_acc_info = next_account_info(acc_infos)?;
+        let vault_acc_info = next_account_info(acc_infos)?;
 
         assert!(delegate_owner_acc_info.is_signer);
 

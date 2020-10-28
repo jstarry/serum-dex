@@ -14,7 +14,7 @@ use solana_sdk::sysvar::clock::Clock;
 pub fn handler<'a>(
     program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
-    amount: u64,
+    spt_amount: u64,
     is_mega: bool,
     is_delegate: bool,
 ) -> Result<(), RegistryError> {
@@ -23,17 +23,12 @@ pub fn handler<'a>(
     let acc_infos = &mut accounts.iter();
 
     // Lockup whitelist relay interface.
-
-    // TODO: make a whitelist relay parser similar to the pool parser.
-
     let delegate_owner_acc_info = next_account_info(acc_infos)?;
     let depositor_tok_acc_info = next_account_info(acc_infos)?;
-    let _pool_vault_acc_info = next_account_info(acc_infos)?;
-    let depositor_tok_owner_acc_info = next_account_info(acc_infos)?;
+    let tok_authority_acc_info = next_account_info(acc_infos)?;
     let token_program_acc_info = next_account_info(acc_infos)?;
 
     // Program specific.
-
     let member_acc_info = next_account_info(acc_infos)?;
     let beneficiary_acc_info = next_account_info(acc_infos)?;
     let entity_acc_info = next_account_info(acc_infos)?;
@@ -69,7 +64,7 @@ pub fn handler<'a>(
         },
         &mut |entity: &mut Entity, registrar: &Registrar, clock: &Clock| {
             access_control(AccessControlRequest {
-                depositor_tok_owner_acc_info,
+                tok_authority_acc_info,
                 depositor_tok_acc_info,
                 member_acc_info,
                 registrar_acc_info,
@@ -77,7 +72,7 @@ pub fn handler<'a>(
                 beneficiary_acc_info,
                 entity_acc_info,
                 token_program_acc_info,
-                amount,
+                spt_amount,
                 is_mega,
                 is_delegate,
                 entity,
@@ -90,7 +85,7 @@ pub fn handler<'a>(
                     state_transition(StateTransitionRequest {
                         entity,
                         member,
-                        amount,
+                        spt_amount,
                         is_delegate,
                         is_mega,
                         registrar,
@@ -111,7 +106,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     info!("access-control: stake");
 
     let AccessControlRequest {
-        depositor_tok_owner_acc_info,
+        tok_authority_acc_info,
         depositor_tok_acc_info,
         member_acc_info,
         delegate_owner_acc_info,
@@ -119,7 +114,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         entity_acc_info,
         token_program_acc_info,
         registrar_acc_info,
-        amount,
+        spt_amount,
         is_mega,
         is_delegate,
         entity,
@@ -154,9 +149,11 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
             return Err(RegistryErrorCode::StaleStakeNeedsWithdrawal)?;
         }
     }
-    // Only activated nodes can stake. If this amount puts us over the
+    // Only activated nodes can stake. If this spt_amount puts us over the
     // activation threshold then allow it.
-    if amount + entity.activation_amount(stake_ctx) < registrar.reward_activation_threshold {
+    let srm_equivalent = stake_ctx.srm_equivalent(spt_amount, is_mega);
+    if srm_equivalent + entity.activation_amount(stake_ctx) < registrar.reward_activation_threshold
+    {
         return Err(RegistryErrorCode::EntityNotActivated)?;
     }
 
@@ -171,7 +168,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     let StateTransitionRequest {
         entity,
         member,
-        amount,
+        spt_amount,
         is_mega,
         is_delegate,
         registrar,
@@ -181,14 +178,14 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     } = req;
 
     // Transfer funds into the staking pool, issuing a staking pool token.
-    pool.create(amount, registrar.nonce)?;
+    pool.create(spt_amount, registrar.nonce)?;
 
     // Update accounts for bookeeping.
     {
-        member.spt_add(amount, is_mega, is_delegate);
+        member.spt_add(spt_amount, is_mega, is_delegate);
         member.generation = entity.generation;
 
-        entity.spt_add(amount, is_mega);
+        entity.spt_add(spt_amount, is_mega);
         entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);
     }
 
@@ -198,7 +195,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 }
 
 struct AccessControlRequest<'a, 'b> {
-    depositor_tok_owner_acc_info: &'a AccountInfo<'a>,
+    tok_authority_acc_info: &'a AccountInfo<'a>,
     depositor_tok_acc_info: &'a AccountInfo<'a>,
     member_acc_info: &'a AccountInfo<'a>,
     delegate_owner_acc_info: &'a AccountInfo<'a>,
@@ -208,7 +205,7 @@ struct AccessControlRequest<'a, 'b> {
     registrar_acc_info: &'a AccountInfo<'a>,
     is_mega: bool,
     is_delegate: bool,
-    amount: u64,
+    spt_amount: u64,
     entity: &'b Entity,
     program_id: &'a Pubkey,
     stake_ctx: &'b StakeContext,
@@ -220,7 +217,7 @@ struct StateTransitionRequest<'a, 'b> {
     stake_ctx: &'b StakeContext,
     registrar: &'b Registrar,
     clock: &'b Clock,
-    amount: u64,
+    spt_amount: u64,
     is_mega: bool,
     is_delegate: bool,
     pool: PoolApi<'a, 'a>,

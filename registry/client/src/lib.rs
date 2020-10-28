@@ -168,18 +168,20 @@ impl Client {
         let vault = self.registrar(&registrar)?.vault;
         let delegate = false;
         let mut accounts = vec![
+            // Whitelist relay interface,
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
             AccountMeta::new(depositor, false),
-            AccountMeta::new(vault, false),
             AccountMeta::new(depositor_authority.pubkey(), true),
             AccountMeta::new_readonly(spl_token::ID, false),
+            // Program specific.
             AccountMeta::new(member, false),
             AccountMeta::new_readonly(beneficiary.pubkey(), true),
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new(vault, false),
         ];
-        let (pool_accs, _, _) = self.common_pool_accounts(pool_program_id, registrar, false)?;
+        let (pool_accs, _) = self.common_pool_accounts(pool_program_id, registrar, false)?;
         accounts.extend_from_slice(&pool_accs);
         let signers = [self.payer(), beneficiary, depositor_authority];
 
@@ -209,18 +211,20 @@ impl Client {
         let vault_acc = rpc::get_token_account::<TokenAccount>(self.inner.rpc(), &r.vault)?;
         let delegate = false;
         let mut accounts = vec![
+            // Whitelist relay interface.
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
             AccountMeta::new(depositor, false),
-            AccountMeta::new(vault, false),
             AccountMeta::new(vault_acc.owner, false),
             AccountMeta::new_readonly(spl_token::ID, false),
+            // Program specific.
             AccountMeta::new(member, false),
             AccountMeta::new_readonly(beneficiary.pubkey(), true),
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new(vault, false),
         ];
-        let (pool_accs, _, _) = self.common_pool_accounts(pool_program_id, registrar, mega)?;
+        let (pool_accs, _) = self.common_pool_accounts(pool_program_id, registrar, mega)?;
         accounts.extend_from_slice(&pool_accs);
         let signers = [self.payer(), beneficiary];
 
@@ -249,15 +253,14 @@ impl Client {
         if mega {
             depositor_assets.push(depositor_mega.expect("must exist for mega stake"));
         }
-        let (mut pool_accounts, pool_asset_vault, depositor_pool_token) = self
-            .stake_pool_accounts(
-                pool_program_id,
-                registrar,
-                mega,
-                depositor_assets,
-                depositor_pool_token,
-                depositor_authority,
-            )?;
+        let (mut pool_accounts, depositor_pool_token) = self.stake_pool_accounts(
+            pool_program_id,
+            registrar,
+            mega,
+            depositor_assets,
+            depositor_pool_token,
+            depositor_authority,
+        )?;
 
         // The account from which funds are flowing into the pool.
         let primary_depositor = {
@@ -269,11 +272,12 @@ impl Client {
         };
 
         let mut accounts = vec![
+            // Whitelist relay interface.
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
             AccountMeta::new(primary_depositor, false),
-            AccountMeta::new(pool_asset_vault, false),
             AccountMeta::new(depositor_authority.pubkey(), true),
             AccountMeta::new_readonly(spl_token::ID, false),
+            // Program specific.
             AccountMeta::new(member, false),
             AccountMeta::new_readonly(beneficiary.pubkey(), true),
             AccountMeta::new(entity, false),
@@ -323,9 +327,9 @@ impl Client {
         pool_program_id: Pubkey,
         registrar: Pubkey,
         mega: bool,
-    ) -> Result<(Vec<AccountMeta>, Pubkey, Pubkey), ClientError> {
+    ) -> Result<(Vec<AccountMeta>, Pubkey), ClientError> {
         let r = self.registrar(&registrar)?;
-        let (mut pool, pool_asset_vault, pool_mint) = {
+        let (mut pool, pool_mint) = {
             let pool_state = self.stake_pool(&registrar)?;
             assert!(pool_state.assets.len() == 1);
             let pool_asset_vault = pool_state.assets[0].clone().vault_address.into();
@@ -349,9 +353,9 @@ impl Client {
                 AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
                 AccountMeta::new(retbuf, false),
             ];
-            (accs, pool_asset_vault, pool_tok_mint)
+            (accs, pool_tok_mint)
         };
-        let (mut mega_pool, mega_pool_asset_vault, mega_pool_mint) = {
+        let (mut mega_pool, mega_pool_mint) = {
             let pool_state = self.stake_mega_pool(&registrar)?;
             assert!(pool_state.assets.len() == 2);
             let pool_asset_vault_1 = pool_state.assets[0].clone().vault_address.into();
@@ -377,14 +381,14 @@ impl Client {
                 AccountMeta::new_readonly(pool_state.vault_signer.into(), false),
                 AccountMeta::new(retbuf, false),
             ];
-            (accs, pool_asset_vault_1, pool_tok_mint)
+            (accs, pool_tok_mint)
         };
 
-        let (main_pool_asset_vault, main_pool_mint) = {
+        let main_pool_mint = {
             if mega {
-                (mega_pool_asset_vault, mega_pool_mint)
+                mega_pool_mint
             } else {
-                (pool_asset_vault, pool_mint)
+                pool_mint
             }
         };
 
@@ -398,7 +402,7 @@ impl Client {
         accounts.append(&mut pids_pool);
         accounts.append(&mut pool);
         accounts.append(&mut mega_pool);
-        Ok((accounts, main_pool_asset_vault, main_pool_mint))
+        Ok((accounts, main_pool_mint))
     }
     pub fn stake_pool_accounts(
         &self,
@@ -408,8 +412,8 @@ impl Client {
         depositor: Vec<Pubkey>,
         depositor_pool_token: Option<Pubkey>,
         depositor_authority: &Keypair,
-    ) -> Result<(Vec<AccountMeta>, Pubkey, Pubkey), ClientError> {
-        let (mut accounts, main_pool_asset_vault, main_pool_mint) =
+    ) -> Result<(Vec<AccountMeta>, Pubkey), ClientError> {
+        let (mut accounts, main_pool_mint) =
             self.common_pool_accounts(pool_program_id, registrar, mega)?;
         let depositor_pool_token = {
             if let Some(dpt) = depositor_pool_token {
@@ -438,7 +442,7 @@ impl Client {
             true,
         ));
 
-        Ok((accounts, main_pool_asset_vault, depositor_pool_token))
+        Ok((accounts, depositor_pool_token))
     }
 }
 

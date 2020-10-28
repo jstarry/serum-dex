@@ -24,8 +24,6 @@ pub fn handler<'a>(
 
     let delegate_owner_acc_info = next_account_info(acc_infos)?;
     let depositor_tok_acc_info = next_account_info(acc_infos)?;
-    let vault_acc_info = next_account_info(acc_infos)?;
-    // Owner or token delegate.
     let tok_authority_acc_info = next_account_info(acc_infos)?;
     let token_program_acc_info = next_account_info(acc_infos)?;
 
@@ -36,6 +34,7 @@ pub fn handler<'a>(
     let entity_acc_info = next_account_info(acc_infos)?;
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
+    let vault_acc_info = next_account_info(acc_infos)?;
 
     let (stake_ctx, _pool) = {
         let cfg = PoolConfig::ReadBasket;

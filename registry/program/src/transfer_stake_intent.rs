@@ -84,7 +84,6 @@ pub fn handler<'a>(
                         is_mega,
                         registrar,
                         clock,
-                        tok_authority_acc_info,
                         depositor_tok_acc_info,
                         member_acc_info,
                         beneficiary_acc_info,
@@ -132,12 +131,8 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
             return Err(RegistryErrorCode::Unauthorized)?;
         }
     }
-    // No delegate implies it's a regular transfer and so the owner must sign.
-    else {
-        if !tok_authority_acc_info.is_signer {
-            return Err(RegistryErrorCode::Unauthorized)?;
-        }
-    }
+    // No delegate implies it's a regular transfer and so this program
+    // will sign. No verification required.
 
     // Account validation.
     let registrar = access_control::registrar(registrar_acc_info, program_id)?;
@@ -202,7 +197,6 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         spt_amount,
         is_mega,
         is_delegate,
-        tok_authority_acc_info,
         depositor_tok_acc_info,
         member_acc_info,
         beneficiary_acc_info,
@@ -260,7 +254,6 @@ struct StateTransitionRequest<'a, 'b, 'c> {
     spt_amount: u64,
     is_mega: bool,
     is_delegate: bool,
-    tok_authority_acc_info: &'a AccountInfo<'b>,
     depositor_tok_acc_info: &'a AccountInfo<'b>,
     member_acc_info: &'a AccountInfo<'b>,
     beneficiary_acc_info: &'a AccountInfo<'b>,

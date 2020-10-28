@@ -28,12 +28,12 @@ pub fn handler(
 
     // Registry authorization.
     assert!(ctx.custom_accounts.len() == 1);
-    let admin_acc_info = &ctx.custom_accounts[0];
-    if !admin_acc_info.is_signer {
+    let registry_acc_info = &ctx.custom_accounts[0];
+    if !registry_acc_info.is_signer {
         return Err(StakeErrorCode::Unauthorized)?;
     }
     let expected_admin: Pubkey = state.admin_key.clone().expect("had admin key").into();
-    if expected_admin != *admin_acc_info.key {
+    if expected_admin != *registry_acc_info.key {
         return Err(StakeErrorCode::Unauthorized)?;
     }
 

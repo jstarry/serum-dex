@@ -25,7 +25,7 @@ pub fn handler<'a>(
     // Lockup whitelist relay interface.
     let delegate_owner_acc_info = next_account_info(acc_infos)?;
     let depositor_tok_acc_info = next_account_info(acc_infos)?;
-    let tok_authority_acc_info = next_account_info(acc_infos)?;
+    let _tok_authority_acc_info = next_account_info(acc_infos)?;
     let token_program_acc_info = next_account_info(acc_infos)?;
 
     // Program specific.
@@ -64,7 +64,6 @@ pub fn handler<'a>(
         },
         &mut |entity: &mut Entity, registrar: &Registrar, clock: &Clock| {
             access_control(AccessControlRequest {
-                tok_authority_acc_info,
                 depositor_tok_acc_info,
                 member_acc_info,
                 registrar_acc_info,
@@ -106,7 +105,6 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     info!("access-control: stake");
 
     let AccessControlRequest {
-        tok_authority_acc_info,
         depositor_tok_acc_info,
         member_acc_info,
         delegate_owner_acc_info,
@@ -195,7 +193,6 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 }
 
 struct AccessControlRequest<'a, 'b> {
-    tok_authority_acc_info: &'a AccountInfo<'a>,
     depositor_tok_acc_info: &'a AccountInfo<'a>,
     member_acc_info: &'a AccountInfo<'a>,
     delegate_owner_acc_info: &'a AccountInfo<'a>,

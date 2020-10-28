@@ -86,6 +86,7 @@ pub fn handler(
             &[],
             asset_amount,
         )?;
+        let signer_seeds = [ctx.pool_account.key.as_ref(), &[state.vault_signer_nonce]];
         solana_sdk::program::invoke_signed(
             &mint_tokens_instr,
             &[
@@ -94,7 +95,7 @@ pub fn handler(
                 ctx.pool_authority.clone(),
                 ctx.spl_token_program.expect("must be provided").clone(),
             ],
-            &[&[&[state.vault_signer_nonce]]],
+            &[&signer_seeds],
         )?;
     }
 

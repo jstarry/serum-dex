@@ -595,6 +595,7 @@ pub struct StakeRequest<'a> {
     pub depositor: Pubkey,
     // Must be Some if `mega` is true.
     pub depositor_mega: Option<Pubkey>,
+    // Must own `depositor` and `depositor_mega`.
     pub depositor_authority: &'a Keypair,
     pub registrar: Pubkey,
     pub pool_token_amount: u64,

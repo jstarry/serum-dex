@@ -311,13 +311,13 @@ fn lifecycle() {
             depositor_pool_token,
         } = client
             .stake(StakeRequest {
+                registrar,
+                entity,
                 member,
                 beneficiary: &beneficiary,
-                entity,
                 depositor: god.pubkey(),
+                depositor_mega: None,
                 depositor_authority: &god_owner,
-                mega: false,
-                registrar,
                 pool_token_amount: stake_intent_amount,
                 pool_program_id: stake_pid,
                 depositor_pool_token: None,

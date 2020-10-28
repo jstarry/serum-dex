@@ -237,27 +237,40 @@ impl Client {
             beneficiary,
             entity,
             depositor,
+            depositor_mega,
             depositor_authority,
-            mega,
             registrar,
             pool_token_amount,
             pool_program_id,
             depositor_pool_token,
         } = req;
-
+        let mega = depositor_mega.is_some();
+        let mut depositor_assets = vec![depositor];
+        if mega {
+            depositor_assets.push(depositor_mega.expect("must exist for mega stake"));
+        }
         let (mut pool_accounts, pool_asset_vault, depositor_pool_token) = self
             .stake_pool_accounts(
                 pool_program_id,
                 registrar,
                 mega,
-                depositor,
+                depositor_assets,
                 depositor_pool_token,
                 depositor_authority,
             )?;
 
+        // The account from which funds are flowing into the pool.
+        let primary_depositor = {
+            if mega {
+                depositor_mega.expect("must exit for mega stake")
+            } else {
+                depositor
+            }
+        };
+
         let mut accounts = vec![
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
-            AccountMeta::new(depositor, false),
+            AccountMeta::new(primary_depositor, false),
             AccountMeta::new(pool_asset_vault, false),
             AccountMeta::new(depositor_authority.pubkey(), true),
             AccountMeta::new_readonly(spl_token::ID, false),
@@ -392,7 +405,7 @@ impl Client {
         pool_program_id: Pubkey,
         registrar: Pubkey,
         mega: bool,
-        depositor: Pubkey,
+        depositor: Vec<Pubkey>,
         depositor_pool_token: Option<Pubkey>,
         depositor_authority: &Keypair,
     ) -> Result<(Vec<AccountMeta>, Pubkey, Pubkey), ClientError> {
@@ -412,12 +425,18 @@ impl Client {
             }
         };
         // Stake specific accounts.
-        accounts.extend_from_slice(&[
-            AccountMeta::new(depositor_pool_token, false),
-            // TODO: if mega then vec (need on program side as well)
-            AccountMeta::new(depositor, false),
-            AccountMeta::new_readonly(depositor_authority.pubkey(), true),
-        ]);
+        accounts.push(AccountMeta::new(depositor_pool_token, false));
+        accounts.extend_from_slice(
+            depositor
+                .iter()
+                .map(|pk| AccountMeta::new(*pk, false))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        );
+        accounts.push(AccountMeta::new_readonly(
+            depositor_authority.pubkey(),
+            true,
+        ));
 
         Ok((accounts, main_pool_asset_vault, depositor_pool_token))
     }
@@ -570,8 +589,9 @@ pub struct StakeRequest<'a> {
     pub beneficiary: &'a Keypair,
     pub entity: Pubkey,
     pub depositor: Pubkey,
+    // Must be Some if `mega` is true.
+    pub depositor_mega: Option<Pubkey>,
     pub depositor_authority: &'a Keypair,
-    pub mega: bool,
     pub registrar: Pubkey,
     pub pool_token_amount: u64,
     pub pool_program_id: Pubkey,

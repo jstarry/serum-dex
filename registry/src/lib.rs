@@ -146,7 +146,8 @@ pub mod instruction {
             mega: bool,
             delegate: bool,
         },
-        /// Transfers the stake intent funds into the staking pool.
+        /// Uses the stake intent balance to purchase `amount` staking pool
+        /// tokens.
         ///
         ///
         TransferStakeIntent {
@@ -158,7 +159,6 @@ pub mod instruction {
         ///
         /// Same as StakeIntent, substituting Accounts[1] for the pool's vault.
         ///
-        // TODO: use vecs properly for MSRM staking.
         Stake {
             amount: u64,
             mega: bool,

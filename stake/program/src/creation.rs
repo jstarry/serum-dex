@@ -1,8 +1,8 @@
 use serum_pool::context::{PoolContext, UserAccounts};
 use serum_pool_schema::{Basket, PoolState};
 use serum_stake::error::{StakeError, StakeErrorCode};
-use solana_sdk::account_info::AccountInfo;
 use solana_program::info;
+use solana_sdk::account_info::AccountInfo;
 use solana_sdk::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
 use spl_token::instruction as token_instruction;
@@ -23,6 +23,9 @@ pub fn handler(
         .as_ref()
         .expect("transact requests have user accounts");
 
+    // TODO: add a custom account to represent an authority over
+    //       the tokent ransfer (for whitelist withdrawals).
+
     // Registry authorization.
     assert!(ctx.custom_accounts.len() == 1);
     let admin_acc_info = &ctx.custom_accounts[0];
@@ -34,6 +37,7 @@ pub fn handler(
         return Err(StakeErrorCode::Unauthorized)?;
     }
 
+    // TODO: this will fail for the MSRM pool.
     assert!(asset_accounts.len() == 1);
     assert!(ctx.pool_vault_accounts.len() == 1);
     let user_token_acc_info = &asset_accounts[0];

@@ -105,22 +105,49 @@ impl Member {
         }
         self.last_active_stake_ctx = stake_ctx.clone();
     }
-    pub fn spt_transfer_pending_withdrawal(&mut self, spt_amount: u64, mega: bool, delegate: bool) {
+
+    pub fn pending_sub(&mut self, amount: u64, is_mega: bool, is_delegate: bool) {
+        if is_delegate {
+            if is_mega {
+                self.books.delegate.balances.mega_pending_withdrawals -= amount;
+            } else {
+                self.books.delegate.balances.pending_withdrawals -= amount;
+            }
+        } else {
+            if is_mega {
+                self.books.main.balances.pending_withdrawals -= amount;
+            } else {
+                self.books.main.balances.mega_pending_withdrawals -= amount;
+            }
+        }
+    }
+    // Transfers the given amount of `spt_amount` tokens for the undlerying
+    // basket `asset_amounts`.
+    pub fn transfer_pending_withdrawal(
+        &mut self,
+        spt_amount: u64,
+        asset_amounts: &[u64],
+        mega: bool,
+        delegate: bool,
+    ) {
+        assert!((mega && asset_amounts.len() == 2) || (!mega && asset_amounts.len() == 1));
         if delegate {
             if mega {
                 self.books.delegate.balances.spt_mega_amount -= spt_amount;
-                self.books.delegate.balances.spt_mega_pending_withdrawals += spt_amount;
+                self.books.delegate.balances.pending_withdrawals += asset_amounts[0];
+                self.books.delegate.balances.mega_pending_withdrawals += asset_amounts[1];
             } else {
                 self.books.delegate.balances.spt_amount -= spt_amount;
-                self.books.delegate.balances.spt_pending_withdrawals += spt_amount;
+                self.books.delegate.balances.pending_withdrawals += asset_amounts[0];
             }
         } else {
             if mega {
                 self.books.main.balances.spt_mega_amount -= spt_amount;
-                self.books.main.balances.spt_mega_pending_withdrawals += spt_amount;
+                self.books.main.balances.pending_withdrawals += asset_amounts[0];
+                self.books.main.balances.mega_pending_withdrawals += asset_amounts[1];
             } else {
                 self.books.main.balances.spt_amount -= spt_amount;
-                self.books.main.balances.spt_pending_withdrawals += spt_amount;
+                self.books.main.balances.pending_withdrawals += asset_amounts[0];
             }
         }
     }
@@ -214,9 +241,9 @@ pub struct Balances {
     // Denominated in staking pool tokens (spt).
     pub spt_amount: u64,
     pub spt_mega_amount: u64,
-    pub spt_pending_withdrawals: u64,
-    pub spt_mega_pending_withdrawals: u64,
     // Denominated in SRM/MSRM.
+    pub pending_withdrawals: u64,
+    pub mega_pending_withdrawals: u64,
     pub stake_intent: u64,
     pub mega_stake_intent: u64,
 }
@@ -225,8 +252,8 @@ impl Balances {
     pub fn is_empty(&self) -> bool {
         self.spt_amount
             + self.spt_mega_amount
-            + self.spt_pending_withdrawals
-            + self.spt_mega_pending_withdrawals
+            + self.pending_withdrawals
+            + self.mega_pending_withdrawals
             + self.stake_intent
             + self.mega_stake_intent
             == 0

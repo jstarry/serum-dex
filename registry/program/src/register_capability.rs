@@ -41,6 +41,7 @@ pub fn handler(
     Ok(())
 }
 
+#[inline(always)]
 fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     info!("access-control: register_capability");
 

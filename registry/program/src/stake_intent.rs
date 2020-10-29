@@ -1,3 +1,4 @@
+use crate::common::invoke_token_transfer;
 use crate::pool::{self, PoolConfig};
 use serum_common::pack::Pack;
 use serum_registry::access_control;
@@ -184,35 +185,17 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     } = req;
 
     // Transfer funds into the stake intent vault.
-    {
-        let withdraw_instruction = spl_token::instruction::transfer(
-            &spl_token::ID,
-            depositor_tok_acc_info.key,
-            vault_acc_info.key,
-            tok_authority_acc_info.key,
-            &[],
-            amount,
-        )?;
-        let acc_infos = &[
-            depositor_tok_acc_info.clone(),
-            vault_acc_info.clone(),
-            tok_authority_acc_info.clone(),
-            token_program_acc_info.clone(),
-        ];
-
-        if is_delegate {
-            solana_sdk::program::invoke_signed(
-                &withdraw_instruction,
-                acc_infos,
-                &[&vault::signer_seeds(
-                    registrar_acc_info.key,
-                    &registrar.nonce,
-                )],
-            )?;
-        } else {
-            solana_sdk::program::invoke_signed(&withdraw_instruction, acc_infos, &[])?;
-        }
-    }
+    //
+    // Note: if delegate == false, then dwe don't need the program to sign this.
+    invoke_token_transfer(
+        depositor_tok_acc_info,
+        vault_acc_info,
+        tok_authority_acc_info,
+        token_program_acc_info,
+        registrar_acc_info,
+        registrar,
+        amount,
+    )?;
 
     member.add_stake_intent(amount, is_mega, is_delegate);
 

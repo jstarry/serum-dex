@@ -1,7 +1,7 @@
 use crate::common::invoke_token_transfer;
 use serum_common::pack::Pack;
 use serum_registry::access_control;
-use serum_registry::accounts::{vault, PendingWithdrawal, Registrar};
+use serum_registry::accounts::{vault, Entity, Member, PendingWithdrawal, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
@@ -56,23 +56,36 @@ pub fn handler(
     PendingWithdrawal::unpack_mut(
         &mut pending_withdrawal_acc_info.try_borrow_mut_data()?,
         &mut |pending_withdrawal: &mut PendingWithdrawal| {
-            state_transition(StateTransitionRequest {
-                pending_withdrawal,
-                user_acc_info,
-                vault_authority_acc_info,
-                tok_program_acc_info,
-                registrar,
-                registrar_acc_info,
-                escrow_vault_acc_info,
-                mega_escrow_vault_acc_info,
-            })
-            .map_err(Into::into)
+            Entity::unpack_mut(
+                &mut entity_acc_info.try_borrow_mut_data()?,
+                &mut |entity: &mut Entity| {
+                    Member::unpack_mut(
+                        &mut member_acc_info.try_borrow_mut_data()?,
+                        &mut |member: &mut Member| {
+                            state_transition(StateTransitionRequest {
+                                pending_withdrawal,
+                                user_acc_info,
+                                vault_authority_acc_info,
+                                tok_program_acc_info,
+                                registrar,
+                                registrar_acc_info,
+                                escrow_vault_acc_info,
+                                mega_escrow_vault_acc_info,
+                                entity,
+                                member,
+                            })
+                            .map_err(Into::into)
+                        },
+                    )
+                },
+            )
         },
     )?;
 
     Ok(())
 }
 
+#[inline(always)]
 fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, RegistryError> {
     info!("access-control: end_stake_withdrawal");
 
@@ -136,6 +149,8 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         registrar_acc_info,
         escrow_vault_acc_info,
         mega_escrow_vault_acc_info,
+        entity,
+        member,
     } = req;
 
     // Send the funds from the escrow vault to the user.
@@ -166,7 +181,19 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         }
     }
 
-    // Burn the pending_withdrawal receipt.
+    // Bookkeeping
+    member.pending_sub(
+        pending_withdrawal.asset_amount,
+        false,
+        pending_withdrawal.delegate,
+    );
+    member.pending_sub(
+        pending_withdrawal.mega_asset_amount,
+        true,
+        pending_withdrawal.delegate,
+    );
+    entity.pending_sub(pending_withdrawal.asset_amount, false);
+    entity.pending_sub(pending_withdrawal.mega_asset_amount, true);
     pending_withdrawal.burned = true;
 
     Ok(())
@@ -199,6 +226,8 @@ struct StateTransitionRequest<'a, 'b, 'c> {
     tok_program_acc_info: &'a AccountInfo<'b>,
     user_acc_info: &'a AccountInfo<'b>,
     registrar_acc_info: &'a AccountInfo<'b>,
-    pending_withdrawal: &'c mut PendingWithdrawal,
     registrar: &'c Registrar,
+    pending_withdrawal: &'c mut PendingWithdrawal,
+    entity: &'c mut Entity,
+    member: &'c mut Member,
 }

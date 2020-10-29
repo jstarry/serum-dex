@@ -40,27 +40,17 @@ impl Entity {
         self.sub_stake_intent(member.books.main().balances.mega_stake_intent, true);
         self.spt_sub(member.books.main().balances.spt_amount, false);
         self.spt_sub(member.books.main().balances.spt_mega_amount, true);
-        self.spt_sub(member.books.main().balances.spt_pending_withdrawals, false);
-        self.spt_sub(
-            member.books.main().balances.spt_mega_pending_withdrawals,
-            true,
-        );
+        self.pending_sub(member.books.main().balances.pending_withdrawals, false);
+        self.pending_sub(member.books.main().balances.mega_pending_withdrawals, true);
 
         // Delegate book remove.
         self.sub_stake_intent(member.books.delegate().balances.stake_intent, false);
         self.sub_stake_intent(member.books.delegate().balances.mega_stake_intent, true);
         self.spt_sub(member.books.delegate().balances.spt_amount, false);
         self.spt_sub(member.books.delegate().balances.spt_mega_amount, true);
-        self.spt_sub(
-            member.books.delegate().balances.spt_pending_withdrawals,
-            false,
-        );
-        self.spt_sub(
-            member
-                .books
-                .delegate()
-                .balances
-                .spt_mega_pending_withdrawals,
+        self.pending_sub(member.books.delegate().balances.pending_withdrawals, false);
+        self.pending_sub(
+            member.books.delegate().balances.mega_pending_withdrawals,
             true,
         );
     }
@@ -71,27 +61,17 @@ impl Entity {
         self.add_stake_intent(member.books.main().balances.mega_stake_intent, true);
         self.spt_add(member.books.main().balances.spt_amount, false);
         self.spt_add(member.books.main().balances.spt_mega_amount, true);
-        self.spt_add(member.books.main().balances.spt_pending_withdrawals, false);
-        self.spt_add(
-            member.books.main().balances.spt_mega_pending_withdrawals,
-            true,
-        );
+        self.pending_add(member.books.main().balances.pending_withdrawals, false);
+        self.pending_add(member.books.main().balances.mega_pending_withdrawals, true);
 
         // Delegate book add.
         self.add_stake_intent(member.books.delegate().balances.stake_intent, false);
         self.add_stake_intent(member.books.delegate().balances.mega_stake_intent, true);
         self.spt_add(member.books.delegate().balances.spt_amount, false);
         self.spt_add(member.books.delegate().balances.spt_mega_amount, true);
-        self.spt_add(
-            member.books.delegate().balances.spt_pending_withdrawals,
-            false,
-        );
-        self.spt_add(
-            member
-                .books
-                .delegate()
-                .balances
-                .spt_mega_pending_withdrawals,
+        self.pending_add(member.books.delegate().balances.pending_withdrawals, false);
+        self.pending_add(
+            member.books.delegate().balances.mega_pending_withdrawals,
             true,
         );
     }
@@ -136,13 +116,36 @@ impl Entity {
         }
     }
 
-    pub fn spt_transfer_pending_withdrawal(&mut self, amount: u64, mega: bool) {
+    pub fn transfer_pending_withdrawal(
+        &mut self,
+        spt_amount: u64,
+        asset_amounts: &[u64],
+        mega: bool,
+    ) {
+        assert!((mega && asset_amounts.len() == 2) || (!mega && asset_amounts.len() == 1));
         if mega {
-            self.balances.spt_mega_amount -= amount;
-            self.balances.spt_mega_pending_withdrawals += amount;
+            self.balances.spt_mega_amount -= spt_amount;
+            self.balances.pending_withdrawals += asset_amounts[0];
+            self.balances.mega_pending_withdrawals += asset_amounts[1];
         } else {
-            self.balances.spt_amount -= amount;
-            self.balances.spt_pending_withdrawals += amount;
+            self.balances.spt_amount -= spt_amount;
+            self.balances.pending_withdrawals += asset_amounts[0];
+        }
+    }
+
+    pub fn pending_sub(&mut self, amount: u64, is_mega: bool) {
+        if is_mega {
+            self.balances.mega_pending_withdrawals -= amount;
+        } else {
+            self.balances.pending_withdrawals -= amount;
+        }
+    }
+
+    pub fn pending_add(&mut self, amount: u64, is_mega: bool) {
+        if is_mega {
+            self.balances.mega_pending_withdrawals += amount;
+        } else {
+            self.balances.pending_withdrawals += amount;
         }
     }
 
@@ -151,7 +154,7 @@ impl Entity {
     /// to date status of the EntityState. It should also be called after any
     /// mutation to the SRM equivalent deposit of this entity to keep the state
     /// up to date.
-    #[inline]
+    #[inline(never)]
     pub fn transition_activation_if_needed(
         &mut self,
         ctx: &StakeContext,
@@ -208,10 +211,12 @@ serum_common::packable!(Entity);
 
 #[derive(Default, Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct Balances {
+    // Denominated in staking pool tokens.
     pub spt_amount: u64,
     pub spt_mega_amount: u64,
-    pub spt_pending_withdrawals: u64,
-    pub spt_mega_pending_withdrawals: u64,
+    // Denopminated in SRM/MSRM.
+    pub pending_withdrawals: u64,
+    pub mega_pending_withdrawals: u64,
     pub stake_intent: u64,
     pub mega_stake_intent: u64,
 }

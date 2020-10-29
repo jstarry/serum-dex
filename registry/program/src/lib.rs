@@ -93,12 +93,8 @@ fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8])
             delegate,
         } => start_stake_withdrawal::handler(program_id, accounts, amount, mega, delegate),
         RegistryInstruction::EndStakeWithdrawal { delegate } => {
-            return Err(RegistryError::ErrorCode(
-                RegistryErrorCode::NotReadySeeNextMajorVersion,
-            ))?;
-        } /*        RegistryInstruction::EndStakeWithdrawal { delegate } => {
-              end_stake_withdrawal::handler(program_id, accounts, delegate)
-          }*/
+            end_stake_withdrawal::handler(program_id, accounts, delegate)
+        }
     };
 
     result?;

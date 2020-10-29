@@ -223,8 +223,8 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     }
 
     // Balances bookeeping.
-    member.spt_transfer_pending_withdrawal(spt_amount, mega, delegate);
-    entity.spt_transfer_pending_withdrawal(spt_amount, mega);
+    member.transfer_pending_withdrawal(spt_amount, &asset_amounts, mega, delegate);
+    entity.transfer_pending_withdrawal(spt_amount, &asset_amounts, mega);
     entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);
 
     // Print the pending withdrawal receipt.

@@ -1,3 +1,4 @@
+use crate::common::invoke_token_transfer;
 use crate::pool::{self, PoolConfig};
 use serum_common::pack::Pack;
 use serum_registry::access_control;
@@ -182,27 +183,15 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     } = req;
 
     // Transfer funds from the program vault back to the original depositor.
-    {
-        let withdraw_instruction = spl_token::instruction::transfer(
-            &spl_token::ID,
-            vault_acc_info.key,
-            depositor_tok_acc_info.key,
-            tok_authority_acc_info.key,
-            &[],
-            amount,
-        )?;
-        let signer_seeds = vault::signer_seeds(registrar_acc_info.key, &registrar.nonce);
-        solana_sdk::program::invoke_signed(
-            &withdraw_instruction,
-            &[
-                vault_acc_info.clone(),
-                depositor_tok_acc_info.clone(),
-                tok_authority_acc_info.clone(),
-                token_program_acc_info.clone(),
-            ],
-            &[&signer_seeds],
-        )?;
-    }
+    invoke_token_transfer(
+        vault_acc_info,
+        depositor_tok_acc_info,
+        tok_authority_acc_info,
+        token_program_acc_info,
+        registrar_acc_info,
+        registrar,
+        amount,
+    )?;
 
     member.sub_stake_intent(amount, is_mega, is_delegate);
 

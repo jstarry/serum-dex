@@ -542,7 +542,7 @@ impl Client {
     pub fn vault_authority(&self, registrar: &Pubkey) -> Result<Pubkey, ClientError> {
         let r = self.registrar(registrar)?;
         Pubkey::create_program_address(&vault::signer_seeds(registrar, &r.nonce), self.program())
-            .map_err(|e| ClientError::Any(anyhow::anyhow!("invalid vault authority")))
+            .map_err(|_| ClientError::Any(anyhow::anyhow!("invalid vault authority")))
     }
     pub fn stake_intent_vault(&self, registrar: &Pubkey) -> Result<TokenAccount, ClientError> {
         let r = self.registrar(registrar)?;

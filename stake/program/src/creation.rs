@@ -35,7 +35,7 @@ pub fn handler(
         return Err(StakeErrorCode::Unauthorized)?;
     }
 
-    // TODO: this will fail for the MSRM pool.
+    // TODO: this will fail for the MSRM pool. Update this.
     assert!(asset_accounts.len() == 1);
     assert!(ctx.pool_vault_accounts.len() == 1);
     let user_token_acc_info = &asset_accounts[0];

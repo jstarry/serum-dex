@@ -390,4 +390,9 @@ fn lifecycle() {
     {
         // todo
     }
+
+    // Entity switch.
+    {
+        // todo
+    }
 }

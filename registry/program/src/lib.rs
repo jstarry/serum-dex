@@ -1,11 +1,8 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-extern crate solana_sdk as solana_program;
-
 use serum_common::pack::Pack;
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use serum_registry::instruction::RegistryInstruction;
-use solana_program::info;
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::entrypoint::ProgramResult;
 use solana_sdk::pubkey::Pubkey;

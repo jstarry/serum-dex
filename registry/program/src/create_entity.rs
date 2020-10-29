@@ -6,9 +6,9 @@ use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     stake_kind: StakeKind,
 ) -> Result<(), RegistryError> {
     info!("handler: create_entity");
@@ -85,6 +85,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
+#[inline(always)]
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: create_entity");
 
@@ -108,18 +109,18 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    entity_acc_info: &'a AccountInfo<'a>,
-    entity_leader_acc_info: &'a AccountInfo<'a>,
-    rent_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    entity_acc_info: &'a AccountInfo<'b>,
+    entity_leader_acc_info: &'a AccountInfo<'b>,
+    rent_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     stake_kind: StakeKind,
     program_id: &'a Pubkey,
 }
 
-struct StateTransitionRequest<'a, 'b> {
-    entity: &'b mut Entity,
+struct StateTransitionRequest<'a, 'b, 'c> {
+    entity: &'c mut Entity,
     leader: &'a Pubkey,
     stake_kind: StakeKind,
-    registrar_acc_info: &'a AccountInfo<'a>,
+    registrar_acc_info: &'a AccountInfo<'b>,
 }

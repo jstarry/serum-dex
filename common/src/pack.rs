@@ -35,11 +35,6 @@ pub trait Pack: std::marker::Sized + std::fmt::Debug {
         let mut src_mut = src;
         Pack::unpack_unchecked(&mut src_mut).and_then(|r: Self| {
             if !src_mut.is_empty() {
-                #[cfg(feature = "program")]
-                solana_sdk::info!(&format!(
-                    "unpack does not consume the entire slice: {:?}",
-                    r
-                ));
                 return Err(ProgramError::InvalidAccountData);
             }
             Ok(r)
@@ -81,8 +76,6 @@ macro_rules! packable {
         impl Pack for $my_struct {
             fn pack(src: $my_struct, dst: &mut [u8]) -> Result<(), ProgramError> {
                 if src.size()? != dst.len() as u64 {
-                    #[cfg(feature = "program")]
-                    solana_sdk::info!("invalid size for pack array");
                     return Err(ProgramError::InvalidAccountData);
                 }
                 serum_common::pack::into_bytes(&src, dst)

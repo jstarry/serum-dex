@@ -79,7 +79,7 @@ pub fn get_basket(
     }
 }
 
-pub fn creation(
+pub fn transact(
     program_id: &Pubkey,
     pool: &Pubkey,
     pool_token_mint: &Pubkey,
@@ -89,7 +89,7 @@ pub fn creation(
     user_pool_asset_tokens: Vec<&Pubkey>,
     user_authority: &Pubkey,
     registry_signer: &Pubkey,
-    amount: u64,
+    action: PoolAction,
 ) -> Instruction {
     let mut accounts = vec![
         AccountMeta::new(*pool, false),
@@ -119,42 +119,7 @@ pub fn creation(
     ]);
     let req = PoolRequest {
         tag: Default::default(),
-        inner: PoolRequestInner::Transact(PoolAction::Create(amount)),
-    };
-    Instruction {
-        program_id: *program_id,
-        accounts,
-        data: req.try_to_vec().expect("PoolRequest serializes"),
-    }
-}
-
-pub fn redemption(
-    program_id: &Pubkey,
-    pool: &Pubkey,
-    pool_token_mint: &Pubkey,
-    pool_asset_vault: &Pubkey,
-    pool_vault_authority: &Pubkey,
-    user_pool_token: &Pubkey,
-    user_pool_asset_token: &Pubkey,
-    user_authority: &Pubkey,
-    registry_signer: &Pubkey,
-    amount: u64,
-) -> Instruction {
-    let accounts = vec![
-        AccountMeta::new(*pool, false),
-        AccountMeta::new(*pool_token_mint, false),
-        AccountMeta::new(*pool_asset_vault, false),
-        AccountMeta::new_readonly(*pool_vault_authority, false),
-        AccountMeta::new(*user_pool_token, false),
-        AccountMeta::new(*user_pool_asset_token, false),
-        AccountMeta::new_readonly(*user_authority, true),
-        AccountMeta::new_readonly(spl_token::ID, false),
-        // Program specific accounts.
-        AccountMeta::new_readonly(*registry_signer, true),
-    ];
-    let req = PoolRequest {
-        tag: Default::default(),
-        inner: PoolRequestInner::Transact(PoolAction::Create(amount)),
+        inner: PoolRequestInner::Transact(action),
     };
     Instruction {
         program_id: *program_id,

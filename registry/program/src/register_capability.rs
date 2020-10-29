@@ -2,13 +2,13 @@ use serum_common::pack::Pack;
 use serum_registry::access_control;
 use serum_registry::accounts::registrar::{Registrar, CAPABILITY_LEN};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     capability_id: u8,
     capability_fee: u32,
 ) -> Result<(), RegistryError> {
@@ -81,9 +81,9 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    registrar_authority_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    registrar_authority_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     capability_id: u8,
     program_id: &'a Pubkey,
 }

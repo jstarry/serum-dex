@@ -1,10 +1,12 @@
 use crate::accounts::{Member, Registrar};
+use crate::error::{RegistryError, RegistryErrorCode};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use num_enum::IntoPrimitive;
 use serum_common::pack::*;
 use serum_pool_schema::Basket;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
 use solana_client_gen::solana_sdk::sysvar::clock::Clock;
+use std::convert::TryInto;
 
 #[cfg(feature = "client")]
 lazy_static::lazy_static! {
@@ -140,7 +142,6 @@ impl Entity {
         }
     }
 
-    /// Moves stake into the pending wtihdrawal state.
     pub fn spt_transfer_pending_withdrawal(&mut self, amount: u64, mega: bool) {
         if mega {
             self.balances.spt_mega_amount -= amount;
@@ -156,6 +157,7 @@ impl Entity {
     /// to date status of the EntityState. It should also be called after any
     /// mutation to the SRM equivalent deposit of this entity to keep the state
     /// up to date.
+    #[inline]
     pub fn transition_activation_if_needed(
         &mut self,
         ctx: &StakeContext,
@@ -171,9 +173,9 @@ impl Entity {
             }
             EntityState::PendingDeactivation {
                 deactivation_start_ts,
+                timelock,
             } => {
-                if clock.unix_timestamp > deactivation_start_ts + registrar.deactivation_timelock()
-                {
+                if clock.unix_timestamp > deactivation_start_ts + timelock {
                     self.state = EntityState::Inactive;
                 }
             }
@@ -181,6 +183,7 @@ impl Entity {
                 if !self.meets_activation_requirements(ctx, registrar) {
                     self.state = EntityState::PendingDeactivation {
                         deactivation_start_ts: clock.unix_timestamp,
+                        timelock: registrar.deactivation_timelock(),
                     }
                 }
             }
@@ -201,6 +204,7 @@ impl Entity {
         ctx.srm_equivalent(self.balances.spt_amount, false)
             + ctx.srm_equivalent(self.balances.spt_mega_amount, true)
     }
+
     fn stake_intent_equivalent(&self) -> u64 {
         self.balances.stake_intent + self.balances.mega_stake_intent * 1_000_000
     }
@@ -249,7 +253,10 @@ pub enum EntityState {
     ///
     /// During this time, either members  must stake more SRM or MSRM or they
     /// should withdraw their stake to retrieve their rewards.
-    PendingDeactivation { deactivation_start_ts: i64 },
+    PendingDeactivation {
+        deactivation_start_ts: i64,
+        timelock: i64,
+    },
     /// The entity is eligble for rewards. Member accounts can stake with this
     /// entity and receive rewards.
     Active,
@@ -280,7 +287,7 @@ impl Default for StakeKind {
 ///
 /// Each Basket represents an exchange ratio of *1* staking pool token
 /// for the basket of underlying assets.
-#[derive(Clone)]
+#[derive(BorshSerialize, BorshDeserialize, BorshSchema, Clone, Debug)]
 pub struct StakeContext {
     /// `basket` represents the underlying asset Basket for a *single* SRM
     /// staking pool token. It  has as single asset: SRM.
@@ -288,6 +295,19 @@ pub struct StakeContext {
     /// `mega_basket` represents the underlying asset Basket for a *single* MSRM
     /// staking pool token. It has two assets: MSRM and SRM.
     mega_basket: Basket,
+}
+
+impl Default for StakeContext {
+    fn default() -> Self {
+        StakeContext {
+            basket: Basket {
+                quantities: vec![0],
+            },
+            mega_basket: Basket {
+                quantities: vec![0, 0],
+            },
+        }
+    }
 }
 
 impl StakeContext {
@@ -320,5 +340,21 @@ impl StakeContext {
         } else {
             spt_count * self.basket.quantities[0] as u64
         }
+    }
+
+    pub fn basket_quantities(&self, spt_count: u64, mega: bool) -> Result<Vec<u64>, RegistryError> {
+        let basket = {
+            if mega {
+                &self.mega_basket
+            } else {
+                &self.basket
+            }
+        };
+        let q: Option<Vec<u64>> = basket
+            .quantities
+            .iter()
+            .map(|q| (*q as u64).checked_mul(spt_count)?.try_into().ok())
+            .collect();
+        q.ok_or(RegistryErrorCode::CheckedFailure.into())
     }
 }

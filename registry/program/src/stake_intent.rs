@@ -9,9 +9,9 @@ use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::sysvar::clock::Clock;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     amount: u64,
     is_mega: bool,
     is_delegate: bool,
@@ -222,18 +222,18 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    delegate_owner_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    delegate_owner_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
-    tok_authority_acc_info: &'a AccountInfo<'a>,
-    depositor_tok_acc_info: &'a AccountInfo<'a>,
-    member_acc_info: &'a AccountInfo<'a>,
-    beneficiary_acc_info: &'a AccountInfo<'a>,
-    entity_acc_info: &'a AccountInfo<'a>,
-    token_program_acc_info: &'a AccountInfo<'a>,
-    vault_acc_info: &'a AccountInfo<'a>,
-    clock_acc_info: &'a AccountInfo<'a>,
+    tok_authority_acc_info: &'a AccountInfo<'b>,
+    depositor_tok_acc_info: &'a AccountInfo<'b>,
+    member_acc_info: &'a AccountInfo<'b>,
+    beneficiary_acc_info: &'a AccountInfo<'b>,
+    entity_acc_info: &'a AccountInfo<'b>,
+    token_program_acc_info: &'a AccountInfo<'b>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    clock_acc_info: &'a AccountInfo<'b>,
     is_delegate: bool,
     is_mega: bool,
 }
@@ -243,20 +243,20 @@ struct AccessControlResponse {
     registrar: Registrar,
 }
 
-struct StateTransitionRequest<'a, 'b> {
-    entity: &'b mut Entity,
-    member: &'b mut Member,
+struct StateTransitionRequest<'a, 'b, 'c> {
+    entity: &'c mut Entity,
+    member: &'c mut Member,
     is_mega: bool,
     is_delegate: bool,
-    registrar: &'b Registrar,
-    clock: &'b Clock,
+    registrar: &'c Registrar,
+    clock: &'c Clock,
     amount: u64,
-    registrar_acc_info: &'a AccountInfo<'a>,
-    vault_acc_info: &'a AccountInfo<'a>,
-    tok_authority_acc_info: &'a AccountInfo<'a>,
-    depositor_tok_acc_info: &'a AccountInfo<'a>,
-    member_acc_info: &'a AccountInfo<'a>,
-    entity_acc_info: &'a AccountInfo<'a>,
-    token_program_acc_info: &'a AccountInfo<'a>,
-    stake_ctx: &'b StakeContext,
+    registrar_acc_info: &'a AccountInfo<'b>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    tok_authority_acc_info: &'a AccountInfo<'b>,
+    depositor_tok_acc_info: &'a AccountInfo<'b>,
+    member_acc_info: &'a AccountInfo<'b>,
+    entity_acc_info: &'a AccountInfo<'b>,
+    token_program_acc_info: &'a AccountInfo<'b>,
+    stake_ctx: &'c StakeContext,
 }

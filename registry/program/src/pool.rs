@@ -1,5 +1,5 @@
 use serum_common::pack::Pack;
-use serum_pool_schema::{Basket, PoolState};
+use serum_pool_schema::{Basket, PoolAction, PoolState};
 use serum_registry::accounts::entity::StakeContext;
 use serum_registry::accounts::vault;
 use serum_registry::error::RegistryError;
@@ -29,7 +29,13 @@ pub struct PoolApi<'a, 'b> {
 
 impl<'a, 'b> PoolApi<'a, 'b> {
     pub fn create(&self, spt_amount: u64, registrar_nonce: u8) -> Result<(), RegistryError> {
-        let instr = serum_stake::instruction::creation(
+        self.transact(PoolAction::Create(spt_amount), registrar_nonce)
+    }
+    pub fn redeem(&self, spt_amount: u64, registrar_nonce: u8) -> Result<(), RegistryError> {
+        self.transact(PoolAction::Redeem(spt_amount), registrar_nonce)
+    }
+    pub fn transact(&self, action: PoolAction, registrar_nonce: u8) -> Result<(), RegistryError> {
+        let instr = serum_stake::instruction::transact(
             self.pool_program_id_acc_info.key,
             self.pool_acc_info.key,
             self.pool_tok_mint_acc_info.key,
@@ -47,7 +53,7 @@ impl<'a, 'b> PoolApi<'a, 'b> {
                 .collect(),
             self.user_tok_auth_acc_info.unwrap().key,
             self.registry_signer_acc_info.unwrap().key,
-            spt_amount,
+            action,
         );
         let signer_seeds =
             vault::signer_seeds(self.registrar_acc_info.unwrap().key, &registrar_nonce);
@@ -90,6 +96,7 @@ impl<'a, 'b> PoolApi<'a, 'b> {
         solana_sdk::program::invoke_signed(&instr, &acc_infos, &[&signer_seeds])?;
         Ok(())
     }
+
     pub fn get_basket(&self, spt_amount: u64) -> Result<Basket, RegistryError> {
         let instr = serum_stake::instruction::get_basket(
             self.pool_program_id_acc_info.key,

@@ -1,12 +1,9 @@
 use serum_registry::error::{RegistryError, RegistryErrorCode};
-use solana_sdk::account_info::AccountInfo;
 use solana_program::info;
+use solana_sdk::account_info::AccountInfo;
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
-) -> Result<(), RegistryError> {
+pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), RegistryError> {
     // todo
     info!("handler: complete_stake_withdrawl");
 

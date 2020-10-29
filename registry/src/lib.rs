@@ -174,16 +174,18 @@ pub mod instruction {
         /// 2. `[writable]` The Member account to withdraw from.
         /// 3. `[writable]` Entity the Stake is associated with.
         /// 4. `[writable]` Registrar.
-        /// 5. `[]`         Rent acc info.
-        /// 6. `[signed]`   Owner of the staking pool token account to redeem.
+        /// 5. `[writable]` SRM escrow vault.
+        /// 6. `[writable]` MSRM escrow vault.
+        /// 7. `[]`         Registrar vault authority.
+        /// 8. `[]`         Token program.
+        /// 9. `[]`         Rent sysvar.
+        /// 10. `[]`        Clock sysvar.
+        ///
+        /// ..              Pool accounts.
         ///
         /// Delegate only.
         ///
         /// 7. `[signed]?`  Delegate owner of the Member account.
-        // TODO: the staking pool token should be burned here so that it can't
-        //       be used during the withdrawal timelock period.
-        /// 7. `[writable]` Staking pool token.
-        /// 8. `[writable]` Staking pool token mint.
         StartStakeWithdrawal {
             amount: u64,
             mega: bool,
@@ -202,22 +204,6 @@ pub mod instruction {
         /// 6. `[writable]` SRM token account to send to upon redemption
         /// 7. `[writable]` MSRM token account to send to upon redemption
         EndStakeWithdrawal,
-        /// Donates funds into the staking pool for reward distribution. Anyone
-        /// can invoke this instruction. Only the non-mega token can be donated.
-        ///
-        /// Accounts:
-        ///
-        /// 0. `[signer]`   Owner of the account sending the funds.
-        /// 1. `[writable]` Account from which to send the funds.
-        /// 2. `[writable]` Program controlled token vault to transfer funds
-        ///                 into.
-        /// 3. `[]`         Registry instance, holding the nonce to calculate
-        ///                 the program-derived-address.
-        /// 4. `[]`         SPL token program.
-        Donate {
-            /// The amount to deposit.
-            amount: u64,
-        },
     }
 }
 

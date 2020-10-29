@@ -10,10 +10,7 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::sysvar::clock::Clock;
 use std::convert::Into;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
-) -> Result<(), RegistryError> {
+pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), RegistryError> {
     info!("handler: update_member");
 
     let acc_infos = &mut accounts.iter();
@@ -68,6 +65,7 @@ pub fn handler<'a>(
     Ok(())
 }
 
+#[inline(always)]
 fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, RegistryError> {
     info!("access-control: switch_entity");
 
@@ -129,14 +127,14 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    member_acc_info: &'a AccountInfo<'a>,
-    beneficiary_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    member_acc_info: &'a AccountInfo<'b>,
+    beneficiary_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
-    registrar_acc_info: &'a AccountInfo<'a>,
-    curr_entity_acc_info: &'a AccountInfo<'a>,
-    new_entity_acc_info: &'a AccountInfo<'a>,
-    clock_acc_info: &'a AccountInfo<'a>,
+    registrar_acc_info: &'a AccountInfo<'b>,
+    curr_entity_acc_info: &'a AccountInfo<'b>,
+    new_entity_acc_info: &'a AccountInfo<'b>,
+    clock_acc_info: &'a AccountInfo<'b>,
 }
 
 struct AccessControlResponse {

@@ -2,13 +2,13 @@ use serum_common::pack::Pack;
 use serum_registry::access_control;
 use serum_registry::accounts::{Member, MemberBooks, Watchtower};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     beneficiary: Pubkey,
     delegate: Pubkey,
     watchtower: Watchtower,
@@ -110,19 +110,19 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    member_acc_info: &'a AccountInfo<'a>,
-    entity_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
-    rent_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    member_acc_info: &'a AccountInfo<'b>,
+    entity_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
+    rent_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
 }
 
-struct StateTransitionRequest<'a, 'b> {
-    member: &'b mut Member,
+struct StateTransitionRequest<'a, 'b, 'c> {
+    member: &'c mut Member,
     beneficiary: Pubkey,
     delegate: Pubkey,
-    entity_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+    entity_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     watchtower: Watchtower,
 }

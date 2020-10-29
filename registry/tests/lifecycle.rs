@@ -375,7 +375,12 @@ fn lifecycle() {
         assert_eq!(pool_vault.amount, stake_intent_amount + pool_token_amount);
     }
 
-    // Stake withdrawal.
+    // Stake withdrawal start.
+    {
+        // todo
+    }
+
+    // Stake Withdrawal end.
     {
         // todo
     }

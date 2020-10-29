@@ -10,7 +10,6 @@ use solana_sdk::pubkey::Pubkey;
 
 mod create_entity;
 mod create_member;
-mod donate;
 mod end_stake_withdrawal;
 mod entity;
 mod initialize;
@@ -26,11 +25,7 @@ mod update_entity;
 mod update_member;
 
 solana_program::entrypoint!(entry);
-fn entry<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
-    instruction_data: &[u8],
-) -> ProgramResult {
+fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let instruction: RegistryInstruction = RegistryInstruction::unpack(instruction_data)
         .map_err(|_| RegistryError::ErrorCode(RegistryErrorCode::WrongSerialization))?;
 
@@ -100,9 +95,6 @@ fn entry<'a>(
             delegate,
         } => transfer_stake_intent::handler(program_id, accounts, amount, mega, delegate),
         RegistryInstruction::EndStakeWithdrawal => Err(RegistryError::ErrorCode(
-            RegistryErrorCode::NotReadySeeNextMajorVersion,
-        )),
-        RegistryInstruction::Donate { amount } => Err(RegistryError::ErrorCode(
             RegistryErrorCode::NotReadySeeNextMajorVersion,
         )),
     };

@@ -2,13 +2,13 @@ use serum_common::pack::Pack;
 use serum_registry::access_control;
 use serum_registry::accounts::{registrar, vault, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     authority: Pubkey,
     nonce: u8,
     withdrawal_timelock: i64,
@@ -57,7 +57,7 @@ pub fn handler<'a>(
     Ok(())
 }
 
-fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), RegistryError> {
+fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     info!("access-control: initialize");
 
     let AccessControlRequest {
@@ -109,6 +109,7 @@ fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), RegistryError
     Ok(())
 }
 
+#[inline(always)]
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: initialize");
 
@@ -137,28 +138,26 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     registrar.pool = pool;
     registrar.mega_pool = mega_pool;
 
-    info!("state-transition: success");
-
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    registrar_acc_info: &'a AccountInfo<'a>,
-    rent_acc_info: &'a AccountInfo<'a>,
-    vault_acc_info: &'a AccountInfo<'a>,
-    mega_vault_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    registrar_acc_info: &'a AccountInfo<'b>,
+    rent_acc_info: &'a AccountInfo<'b>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    mega_vault_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
     nonce: u8,
 }
 
-struct StateTransitionRequest<'a, 'b> {
-    registrar: &'b mut Registrar,
+struct StateTransitionRequest<'a, 'b, 'c> {
+    registrar: &'c mut Registrar,
     authority: Pubkey,
     withdrawal_timelock: i64,
     deactivation_timelock_premium: i64,
     nonce: u8,
-    vault_acc_info: &'a AccountInfo<'a>,
-    mega_vault_acc_info: &'a AccountInfo<'a>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    mega_vault_acc_info: &'a AccountInfo<'b>,
     reward_activation_threshold: u64,
     pool: Pubkey,
     mega_pool: Pubkey,

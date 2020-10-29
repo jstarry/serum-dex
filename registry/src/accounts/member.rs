@@ -1,3 +1,4 @@
+use crate::accounts::entity::StakeContext;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use serum_common::pack::*;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
@@ -6,7 +7,7 @@ use solana_client_gen::solana_sdk::pubkey::Pubkey;
 lazy_static::lazy_static! {
     pub static ref SIZE: u64 = Member::default()
                 .size()
-                .expect("Vesting has a fixed size");
+                .expect("Member has a fixed size");
 }
 
 /// Member account tracks membership with a node `Entity`.
@@ -26,6 +27,20 @@ pub struct Member {
     pub watchtower: Watchtower,
     /// The balance subbaccounts that partition the Member's stake balance.
     pub books: MemberBooks,
+    /// The *last* stake context used when creating a staking pool token.
+    /// This is used to mark the price of a staking pool token to its underlying
+    /// basket, when a withdrawal on an inactive entity happens.
+    ///
+    /// Marking the price this ways relies on the fact that the price of
+    /// a staking pool token can only go up (since the underlying basket can't
+    /// be removed or destroyed without redeeming a staking pool token).
+    ///
+    /// Additionally, it implies that withdrawing from the staking pool on
+    /// an inactive entity *might* yield less of the underlying asset than
+    /// if a withdrawal happens on an active entity (since rewards might have
+    /// been dropped on the staking pool after this member deposited, and
+    /// before the entity became inactive, pushing the price up.)
+    pub last_active_stake_ctx: Option<StakeContext>,
 }
 
 impl Member {
@@ -74,7 +89,7 @@ impl Member {
             }
         }
     }
-    pub fn spt_add(&mut self, amount: u64, mega: bool, delegate: bool) {
+    pub fn spt_add(&mut self, stake_ctx: &StakeContext, amount: u64, mega: bool, delegate: bool) {
         if delegate {
             if mega {
                 self.books.delegate.balances.spt_mega_amount += amount;
@@ -88,23 +103,24 @@ impl Member {
                 self.books.main.balances.spt_amount += amount;
             }
         }
+        self.last_active_stake_ctx = Some(stake_ctx.clone());
     }
-    pub fn spt_transfer_pending_withdrawal(&mut self, amount: u64, mega: bool, delegate: bool) {
+    pub fn spt_transfer_pending_withdrawal(&mut self, spt_amount: u64, mega: bool, delegate: bool) {
         if delegate {
             if mega {
-                self.books.delegate.balances.spt_mega_amount -= amount;
-                self.books.delegate.balances.spt_mega_pending_withdrawals += amount;
+                self.books.delegate.balances.spt_mega_amount -= spt_amount;
+                self.books.delegate.balances.spt_mega_pending_withdrawals += spt_amount;
             } else {
-                self.books.delegate.balances.spt_amount -= amount;
-                self.books.delegate.balances.spt_pending_withdrawals += amount;
+                self.books.delegate.balances.spt_amount -= spt_amount;
+                self.books.delegate.balances.spt_pending_withdrawals += spt_amount;
             }
         } else {
             if mega {
-                self.books.main.balances.spt_mega_amount -= amount;
-                self.books.main.balances.spt_mega_pending_withdrawals += amount;
+                self.books.main.balances.spt_mega_amount -= spt_amount;
+                self.books.main.balances.spt_mega_pending_withdrawals += spt_amount;
             } else {
-                self.books.main.balances.spt_amount -= amount;
-                self.books.main.balances.spt_pending_withdrawals += amount;
+                self.books.main.balances.spt_amount -= spt_amount;
+                self.books.main.balances.spt_pending_withdrawals += spt_amount;
             }
         }
     }

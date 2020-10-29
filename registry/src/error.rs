@@ -40,6 +40,7 @@ pub enum RegistryErrorCode {
     InvalidTokenAuthority = 25,
     EntityLeaderMismatch = 26,
     EntityMemberMismatch = 27,
+    CheckedFailure = 28,
     Unknown = 1000,
 }
 

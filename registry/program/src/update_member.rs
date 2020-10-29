@@ -7,9 +7,9 @@ use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 use std::convert::Into;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     watchtower: Option<Watchtower>,
     delegate: Option<Pubkey>,
 ) -> Result<(), RegistryError> {
@@ -103,9 +103,9 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    member_acc_info: &'a AccountInfo<'a>,
-    beneficiary_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    member_acc_info: &'a AccountInfo<'b>,
+    beneficiary_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
     delegate: Option<Pubkey>,
 }

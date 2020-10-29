@@ -10,9 +10,9 @@ use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::sysvar::clock::Clock;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     spt_amount: u64,
     is_mega: bool,
     is_delegate: bool,
@@ -218,7 +218,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         member.sub_stake_intent(stake_intent_amount, is_mega, is_delegate);
         entity.sub_stake_intent(stake_intent_amount, is_mega);
 
-        member.spt_add(spt_amount, is_mega, is_delegate);
+        member.spt_add(&stake_ctx, spt_amount, is_mega, is_delegate);
         entity.spt_add(spt_amount, is_mega);
 
         entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);

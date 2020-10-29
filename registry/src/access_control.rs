@@ -10,6 +10,7 @@ use solana_client_gen::solana_sdk::sysvar::rent::Rent;
 use solana_client_gen::solana_sdk::sysvar::Sysvar;
 use spl_token::state::Account as TokenAccount;
 
+#[inline]
 pub fn governance(
     program_id: &Pubkey,
     registrar_acc_info: &AccountInfo,
@@ -24,6 +25,7 @@ pub fn governance(
     }
     Ok(r)
 }
+
 pub fn clock(acc_info: &AccountInfo) -> Result<Clock, RegistryError> {
     if *acc_info.key != solana_sdk::sysvar::clock::id() {
         return Err(RegistryErrorCode::InvalidClockSysvar)?;

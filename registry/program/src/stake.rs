@@ -11,9 +11,9 @@ use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::sysvar::clock::Clock;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     spt_amount: u64,
     is_mega: bool,
     is_delegate: bool,
@@ -100,7 +100,6 @@ pub fn handler<'a>(
     )
 }
 
-#[inline(always)]
 fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     info!("access-control: stake");
 
@@ -155,11 +154,10 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         return Err(RegistryErrorCode::EntityNotActivated)?;
     }
 
-    info!("access-control: success");
-
     Ok(())
 }
 
+#[inline]
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: stake");
 
@@ -180,42 +178,40 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 
     // Update accounts for bookeeping.
     {
-        member.spt_add(spt_amount, is_mega, is_delegate);
+        member.spt_add(&stake_ctx, spt_amount, is_mega, is_delegate);
         member.generation = entity.generation;
 
         entity.spt_add(spt_amount, is_mega);
         entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);
     }
 
-    info!("state-transition: success");
-
     Ok(())
 }
 
-struct AccessControlRequest<'a, 'b> {
-    depositor_tok_acc_info: &'a AccountInfo<'a>,
-    member_acc_info: &'a AccountInfo<'a>,
-    delegate_owner_acc_info: &'a AccountInfo<'a>,
-    beneficiary_acc_info: &'a AccountInfo<'a>,
-    entity_acc_info: &'a AccountInfo<'a>,
-    token_program_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b, 'c> {
+    depositor_tok_acc_info: &'a AccountInfo<'b>,
+    member_acc_info: &'a AccountInfo<'b>,
+    delegate_owner_acc_info: &'a AccountInfo<'b>,
+    beneficiary_acc_info: &'a AccountInfo<'b>,
+    entity_acc_info: &'a AccountInfo<'b>,
+    token_program_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     is_mega: bool,
     is_delegate: bool,
     spt_amount: u64,
-    entity: &'b Entity,
+    entity: &'c Entity,
     program_id: &'a Pubkey,
-    stake_ctx: &'b StakeContext,
+    stake_ctx: &'c StakeContext,
 }
 
-struct StateTransitionRequest<'a, 'b> {
-    entity: &'b mut Entity,
-    member: &'b mut Member,
-    stake_ctx: &'b StakeContext,
-    registrar: &'b Registrar,
-    clock: &'b Clock,
+struct StateTransitionRequest<'a, 'b, 'c> {
+    entity: &'c mut Entity,
+    member: &'c mut Member,
+    stake_ctx: &'c StakeContext,
+    registrar: &'c Registrar,
+    clock: &'c Clock,
     spt_amount: u64,
     is_mega: bool,
     is_delegate: bool,
-    pool: PoolApi<'a, 'a>,
+    pool: PoolApi<'a, 'b>,
 }

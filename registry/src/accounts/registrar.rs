@@ -22,9 +22,9 @@ pub struct Registrar {
     pub nonce: u8,
     /// Maps capability identifier to the fee rate earned for the capability.
     pub capabilities_fees: [u32; CAPABILITY_LEN as usize],
-    /// Address of the capabilities list account, in the event we want to
-    /// enforce access control on capabilities addresses.
-    pub capabilities_list: Pubkey,
+    /// The amount of tokens that must be deposited to be eligible for rewards,
+    /// denominated in SRM.
+    pub reward_activation_threshold: u64,
     /// Number of seconds that must pass for a withdrawal to complete.
     pub withdrawal_timelock: i64,
     /// Number of seconds *in addition* to the withdrawal timelock it takes for
@@ -36,13 +36,12 @@ pub struct Registrar {
     pub vault: Pubkey,
     /// Vault holding stake-intent mega tokens.
     pub mega_vault: Pubkey,
-    /// The amount of tokens that must be deposited to be eligible for rewards,
-    /// denominated in SRM.
-    pub reward_activation_threshold: u64,
     /// Address of the SRM staking pool.
     pub pool: Pubkey,
     /// Address of the MSRM staking pool.
     pub mega_pool: Pubkey,
+    /// Withdrawal escrow, where funds sit during the pending withdrawal period.
+    pub escrow: Escrow,
 }
 
 impl Registrar {
@@ -65,6 +64,12 @@ impl Registrar {
     pub fn fee_rate(&self, capability_id: usize) -> u32 {
         self.capabilities_fees[capability_id]
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, BorshSerialize, BorshDeserialize, BorshSchema)]
+pub struct Escrow {
+    pub vault: Pubkey,
+    pub mega_vault: Pubkey,
 }
 
 serum_common::packable!(Registrar);

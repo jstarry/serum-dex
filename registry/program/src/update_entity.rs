@@ -6,9 +6,9 @@ use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     leader: Pubkey,
 ) -> Result<(), RegistryError> {
     info!("handler: update_entity");
@@ -74,10 +74,10 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    entity_acc_info: &'a AccountInfo<'a>,
-    entity_leader_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    entity_acc_info: &'a AccountInfo<'b>,
+    entity_leader_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
 }
 

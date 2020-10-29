@@ -2,15 +2,12 @@ use crate::access_control;
 use serum_common::pack::*;
 use serum_rewards::accounts::{vault, Instance};
 use serum_rewards::error::RewardsError;
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::program_pack::Pack as TokenPack;
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
-) -> Result<(), RewardsError> {
+pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), RewardsError> {
     info!("handler: migrate");
 
     let acc_infos = &mut accounts.iter();
@@ -99,18 +96,18 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RewardsError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
+struct AccessControlRequest<'a, 'b> {
     program_id: &'a Pubkey,
-    instance_acc_info: &'a AccountInfo<'a>,
-    instance_authority_acc_info: &'a AccountInfo<'a>,
+    instance_acc_info: &'a AccountInfo<'b>,
+    instance_authority_acc_info: &'a AccountInfo<'b>,
 }
 
-struct StateTransitionRequest<'a> {
+struct StateTransitionRequest<'a, 'b> {
     instance: Instance,
-    instance_acc_info: &'a AccountInfo<'a>,
+    instance_acc_info: &'a AccountInfo<'b>,
     instance_vault_amount: u64,
-    instance_vault_acc_info: &'a AccountInfo<'a>,
-    instance_vault_authority_acc_info: &'a AccountInfo<'a>,
-    receiver_spl_acc_info: &'a AccountInfo<'a>,
-    token_program_acc_info: &'a AccountInfo<'a>,
+    instance_vault_acc_info: &'a AccountInfo<'b>,
+    instance_vault_authority_acc_info: &'a AccountInfo<'b>,
+    receiver_spl_acc_info: &'a AccountInfo<'b>,
+    token_program_acc_info: &'a AccountInfo<'b>,
 }

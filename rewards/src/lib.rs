@@ -11,7 +11,7 @@ pub mod error;
 #[cfg_attr(feature = "client", solana_client_gen)]
 pub mod instruction {
     use super::*;
-    #[derive(BorshSerialize, BorshDeserialize, BorshSchema)]
+    #[derive(Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
     pub enum RewardsInstruction {
         /// Accounts:
         ///

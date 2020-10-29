@@ -36,6 +36,7 @@ pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), Regi
         new_entity_acc_info,
         clock_acc_info,
     })?;
+
     let member = Member::unpack(&member_acc_info.try_borrow_data()?)?;
     Entity::unpack_mut(
         &mut curr_entity_acc_info.try_borrow_mut_data()?,
@@ -44,12 +45,12 @@ pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), Regi
                 &mut new_entity_acc_info.try_borrow_mut_data()?,
                 &mut |new_entity: &mut Entity| {
                     state_transition(StateTransitionRequest {
-                        member: &member,
                         curr_entity,
                         new_entity,
-                        clock: &clock,
+                        member: &member,
                         registrar: &registrar,
                         stake_ctx: &stake_ctx,
+                        clock: &clock,
                     })
                     .map_err(Into::into)
                 },
@@ -60,7 +61,6 @@ pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), Regi
     Ok(())
 }
 
-#[inline(always)]
 fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, RegistryError> {
     info!("access-control: switch_entity");
 
@@ -94,11 +94,10 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
     let _new_entity = access_control::entity(new_entity_acc_info, registrar_acc_info, program_id)?;
     let clock = access_control::clock(clock_acc_info)?;
 
-    info!("access-control: success");
-
     Ok(AccessControlResponse { registrar, clock })
 }
 
+#[inline(always)]
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: switch_entity");
 
@@ -117,19 +116,17 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     new_entity.add(member);
     new_entity.transition_activation_if_needed(stake_ctx, registrar, clock);
 
-    info!("state-transition: success");
-
     Ok(())
 }
 
 struct AccessControlRequest<'a, 'b> {
     member_acc_info: &'a AccountInfo<'b>,
     beneficiary_acc_info: &'a AccountInfo<'b>,
-    program_id: &'a Pubkey,
     registrar_acc_info: &'a AccountInfo<'b>,
     curr_entity_acc_info: &'a AccountInfo<'b>,
     new_entity_acc_info: &'a AccountInfo<'b>,
     clock_acc_info: &'a AccountInfo<'b>,
+    program_id: &'a Pubkey,
 }
 
 struct AccessControlResponse {

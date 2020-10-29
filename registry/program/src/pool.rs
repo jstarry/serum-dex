@@ -27,9 +27,11 @@ pub struct PoolApi<'a, 'b> {
 }
 
 impl<'a, 'b> PoolApi<'a, 'b> {
+    #[inline(always)]
     pub fn create(&self, spt_amount: u64, registrar_nonce: u8) -> Result<(), RegistryError> {
         self.transact(PoolAction::Create(spt_amount), registrar_nonce)
     }
+    #[inline(always)]
     pub fn redeem(&self, spt_amount: u64, registrar_nonce: u8) -> Result<(), RegistryError> {
         self.transact(PoolAction::Redeem(spt_amount), registrar_nonce)
     }

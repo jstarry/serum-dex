@@ -9,7 +9,7 @@ lazy_static::lazy_static! {
                 .expect("Vesting has a fixed size");
 }
 
-pub const CAPABILITY_LEN: u8 = 32;
+pub const CAPABILITY_LEN: u8 = 16;
 
 /// Registry defines the account representing an instance of the program.
 #[derive(Clone, Debug, Default, PartialEq, BorshSerialize, BorshDeserialize, BorshSchema)]

@@ -127,7 +127,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     } = req;
 
     registrar.initialized = true;
-    registrar.capabilities_fees = [0; 32];
+    registrar.capabilities_fees = [0; registrar::CAPABILITY_LEN as usize];
     registrar.authority = authority;
     registrar.withdrawal_timelock = withdrawal_timelock;
     registrar.deactivation_timelock_premium = deactivation_timelock_premium;

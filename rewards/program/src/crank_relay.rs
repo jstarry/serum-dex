@@ -3,14 +3,14 @@ use serum_common::pack::Pack;
 use serum_registry::accounts::{EntityState, Registrar};
 use serum_rewards::accounts::{vault, Instance};
 use serum_rewards::error::{RewardsError, RewardsErrorCode};
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     dex_instruction_data: Vec<u8>,
 ) -> Result<(), RewardsError> {
     info!("handler: exec");
@@ -213,28 +213,28 @@ fn event_q_len(data: &[u8]) -> u64 {
     u32::from_le_bytes(b) as u64
 }
 
-struct AccessControlRequest<'a> {
-    instance_acc_info: &'a AccountInfo<'a>,
-    vault_acc_info: &'a AccountInfo<'a>,
-    vault_authority_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
-    entity_acc_info: &'a AccountInfo<'a>,
-    entity_leader_acc_info: &'a AccountInfo<'a>,
-    dex_program_acc_info: &'a AccountInfo<'a>,
-    event_q_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    instance_acc_info: &'a AccountInfo<'b>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    vault_authority_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
+    entity_acc_info: &'a AccountInfo<'b>,
+    entity_leader_acc_info: &'a AccountInfo<'b>,
+    dex_program_acc_info: &'a AccountInfo<'b>,
+    event_q_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
 }
 
-struct StateTransitionRequest<'a> {
-    instance_acc_info: &'a AccountInfo<'a>,
-    dex_program_acc_info: &'a AccountInfo<'a>,
-    remaining_relay_accs: Vec<&'a AccountInfo<'a>>,
-    event_q_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+struct StateTransitionRequest<'a, 'b> {
+    instance_acc_info: &'a AccountInfo<'b>,
+    dex_program_acc_info: &'a AccountInfo<'b>,
+    remaining_relay_accs: Vec<&'a AccountInfo<'b>>,
+    event_q_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     dex_instruction_data: Vec<u8>,
-    vault_acc_info: &'a AccountInfo<'a>,
-    vault_authority_acc_info: &'a AccountInfo<'a>,
-    token_acc_info: &'a AccountInfo<'a>,
-    token_program_acc_info: &'a AccountInfo<'a>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    vault_authority_acc_info: &'a AccountInfo<'b>,
+    token_acc_info: &'a AccountInfo<'b>,
+    token_program_acc_info: &'a AccountInfo<'b>,
     nonce: u8,
 }

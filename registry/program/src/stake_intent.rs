@@ -225,7 +225,6 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 struct AccessControlRequest<'a, 'b> {
     delegate_owner_acc_info: &'a AccountInfo<'b>,
     registrar_acc_info: &'a AccountInfo<'b>,
-    program_id: &'a Pubkey,
     tok_authority_acc_info: &'a AccountInfo<'b>,
     depositor_tok_acc_info: &'a AccountInfo<'b>,
     member_acc_info: &'a AccountInfo<'b>,
@@ -234,6 +233,7 @@ struct AccessControlRequest<'a, 'b> {
     token_program_acc_info: &'a AccountInfo<'b>,
     vault_acc_info: &'a AccountInfo<'b>,
     clock_acc_info: &'a AccountInfo<'b>,
+    program_id: &'a Pubkey,
     is_delegate: bool,
     is_mega: bool,
 }
@@ -244,13 +244,6 @@ struct AccessControlResponse {
 }
 
 struct StateTransitionRequest<'a, 'b, 'c> {
-    entity: &'c mut Entity,
-    member: &'c mut Member,
-    is_mega: bool,
-    is_delegate: bool,
-    registrar: &'c Registrar,
-    clock: &'c Clock,
-    amount: u64,
     registrar_acc_info: &'a AccountInfo<'b>,
     vault_acc_info: &'a AccountInfo<'b>,
     tok_authority_acc_info: &'a AccountInfo<'b>,
@@ -258,5 +251,12 @@ struct StateTransitionRequest<'a, 'b, 'c> {
     member_acc_info: &'a AccountInfo<'b>,
     entity_acc_info: &'a AccountInfo<'b>,
     token_program_acc_info: &'a AccountInfo<'b>,
+    entity: &'c mut Entity,
+    member: &'c mut Member,
+    registrar: &'c Registrar,
+    clock: &'c Clock,
     stake_ctx: &'c StakeContext,
+    is_mega: bool,
+    is_delegate: bool,
+    amount: u64,
 }

@@ -18,6 +18,7 @@ use solana_sdk::sysvar::clock::Clock;
 //
 // This method transitions the Entity's state, before performing the action
 // provided by the given closure.
+#[inline(always)]
 pub fn with_entity<F>(req: WithEntityRequest, f: &mut F) -> Result<(), RegistryError>
 where
     F: FnMut(&mut Entity, &Registrar, &Clock) -> Result<(), RegistryError>,

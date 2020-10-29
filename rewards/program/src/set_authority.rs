@@ -2,14 +2,14 @@ use crate::access_control;
 use serum_common::pack::*;
 use serum_rewards::accounts::Instance;
 use serum_rewards::error::RewardsError;
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 use std::convert::Into;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     new_authority: Pubkey,
 ) -> Result<(), RewardsError> {
     info!("handler: set_authority");
@@ -70,10 +70,10 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RewardsError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
+struct AccessControlRequest<'a, 'b> {
     program_id: &'a Pubkey,
-    instance_acc_info: &'a AccountInfo<'a>,
-    instance_authority_acc_info: &'a AccountInfo<'a>,
+    instance_acc_info: &'a AccountInfo<'b>,
+    instance_authority_acc_info: &'a AccountInfo<'b>,
 }
 
 struct StateTransitionRequest<'a> {

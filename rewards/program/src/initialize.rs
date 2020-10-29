@@ -2,14 +2,14 @@ use crate::access_control;
 use serum_common::pack::Pack;
 use serum_rewards::accounts::Instance;
 use serum_rewards::error::{RewardsError, RewardsErrorCode};
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 use std::convert::Into;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     nonce: u8,
     registry_program_id: Pubkey,
     dex_program_id: Pubkey,
@@ -116,20 +116,20 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RewardsError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
-    instance_acc_info: &'a AccountInfo<'a>,
-    vault_acc_info: &'a AccountInfo<'a>,
-    rent_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+struct AccessControlRequest<'a, 'b> {
+    instance_acc_info: &'a AccountInfo<'b>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    rent_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     nonce: u8,
     program_id: &'a Pubkey,
     registry_program_id: Pubkey,
 }
 
-struct StateTransitionRequest<'a, 'b> {
-    instance: &'b mut Instance,
-    vault_acc_info: &'a AccountInfo<'a>,
-    registrar_acc_info: &'a AccountInfo<'a>,
+struct StateTransitionRequest<'a, 'b, 'c> {
+    instance: &'c mut Instance,
+    vault_acc_info: &'a AccountInfo<'b>,
+    registrar_acc_info: &'a AccountInfo<'b>,
     nonce: u8,
     registry_program_id: Pubkey,
     dex_program_id: Pubkey,

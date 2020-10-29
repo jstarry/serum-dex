@@ -147,7 +147,7 @@ pub fn initialize(
                 pool_program_id,
                 &mega_pool_state_kp.pubkey(),
                 &mega_pool_token_mint.pubkey(),
-                vec![&mega_pool_asset_vault.pubkey(), &pool_asset_vault.pubkey()],
+                vec![&pool_asset_vault.pubkey(), &mega_pool_asset_vault.pubkey()],
                 &mega_pool_vault_authority,
                 &registrar_vault_authority,
                 mega_pool_vault_nonce,

@@ -400,10 +400,6 @@ impl Client {
         Ok(EndStakeWithdrawalResponse {})
     }
 
-    pub fn donate(&self, req: DonateRequest) -> Result<DonateResponse, ClientError> {
-        Ok(DonateResponse {})
-    }
-
     pub fn common_pool_accounts(
         &self,
         pool_program_id: Pubkey,

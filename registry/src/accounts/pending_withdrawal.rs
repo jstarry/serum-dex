@@ -23,10 +23,10 @@ pub struct PendingWithdrawal {
     pub spt_amount: u64,
     /// The pool being withdrawn from.
     pub pool: Pubkey,
-    /// The amounts of the underlying assets to be received from this
-    /// withdrawal. The ordering of each element here corresponds to
-    /// the odrdering defined in `serum_pool_schema::PoolState::assets`.
-    pub asset_amounts: Vec<u64>,
+    /// The amount of the underlying asset to be received (SRM).
+    pub asset_amount: u64,
+    /// The amount of the underlying mega asset to be received (MSRM).
+    pub mega_asset_amount: u64,
 }
 
 serum_common::packable!(PendingWithdrawal);

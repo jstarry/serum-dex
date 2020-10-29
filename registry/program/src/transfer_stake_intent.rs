@@ -39,7 +39,7 @@ pub fn handler(
 
     // Pool accounts.
     let (stake_ctx, pool) = {
-        let cfg = PoolConfig::Stake {
+        let cfg = PoolConfig::Transact {
             registry_signer_acc_info: vault_authority_acc_info,
             registrar_acc_info,
             token_program_acc_info,

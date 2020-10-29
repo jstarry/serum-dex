@@ -35,7 +35,7 @@ pub fn handler(
     let vault_acc_info = next_account_info(acc_infos)?;
 
     let (stake_ctx, _pool) = {
-        let cfg = PoolConfig::ReadBasket;
+        let cfg = PoolConfig::GetBasket;
         pool::parse_accounts(cfg, acc_infos, false)?
     };
 

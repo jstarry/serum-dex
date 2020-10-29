@@ -1,3 +1,4 @@
+use crate::common::invoke_token_transfer;
 use crate::pool::{self, PoolApi, PoolConfig};
 use serum_common::pack::Pack;
 use serum_registry::access_control;
@@ -26,12 +27,12 @@ pub fn handler(
     let member_acc_info = next_account_info(acc_infos)?;
     let entity_acc_info = next_account_info(acc_infos)?;
     let registrar_acc_info = next_account_info(acc_infos)?;
-    let rent_acc_info = next_account_info(acc_infos)?;
-    let clock_acc_info = next_account_info(acc_infos)?;
     let escrow_vault_acc_info = next_account_info(acc_infos)?;
     let mega_escrow_vault_acc_info = next_account_info(acc_infos)?;
     let vault_authority_acc_info = next_account_info(acc_infos)?;
     let tok_program_acc_info = next_account_info(acc_infos)?;
+    let clock_acc_info = next_account_info(acc_infos)?;
+    let rent_acc_info = next_account_info(acc_infos)?;
 
     let delegate_owner_acc_info = {
         if delegate {
@@ -43,8 +44,11 @@ pub fn handler(
 
     // Pool accounts.
     let (stake_ctx, pool) = {
-        // TODO: figure out the right config needed here.
-        let cfg = PoolConfig::ReadBasket;
+        let cfg = PoolConfig::Transact {
+            registry_signer_acc_info: vault_authority_acc_info,
+            registrar_acc_info,
+            token_program_acc_info: tok_program_acc_info,
+        };
         pool::parse_accounts(cfg, acc_infos, mega)?
     };
 
@@ -130,6 +134,8 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         return Err(RegistryErrorCode::Unauthorized)?;
     }
 
+    // TODO: check delegate here.
+
     // Account validation.
     let rent = access_control::rent(rent_acc_info)?;
     let clock = access_control::clock(clock_acc_info)?;
@@ -162,7 +168,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         ) {
             return Err(RegistryErrorCode::NotRentExempt)?;
         }
-        // TODO: check amount being withdraw.
+        // TODO: check amount/balances being withdraw.
     }
 
     info!("access-control: success");
@@ -197,6 +203,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 
     // The amounts that were transferred into the escrow vaults from `redeem`.
     let mut asset_amounts = stake_ctx.basket_quantities(spt_amount, mega)?;
+    assert!((mega && asset_amounts.len() == 2) || (!mega && asset_amounts.len() == 1));
 
     // Inactive entities don't receive rewards while inactive, so return the
     // excess amounts back into the pool.
@@ -209,7 +216,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
             mega_escrow_vault_acc_info,
             vault_authority_acc_info,
             tok_program_acc_info,
-            registrar.nonce,
+            registrar,
             spt_amount,
             mega,
         )?;
@@ -227,9 +234,12 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     pending_withdrawal.end_ts = clock.unix_timestamp + registrar.deactivation_timelock();
     pending_withdrawal.spt_amount = spt_amount;
     pending_withdrawal.delegate = delegate;
-    pending_withdrawal.asset_amounts = asset_amounts.clone();
-
-    info!("state-transition: success");
+    pending_withdrawal.asset_amount = asset_amounts[0];
+    pending_withdrawal.mega_asset_amount = match asset_amounts.len() {
+        1 => 0,
+        2 => asset_amounts[1],
+        _ => return Err(RegistryErrorCode::InvalidAssetsLen)?,
+    };
 
     Ok(())
 }
@@ -248,74 +258,44 @@ fn pool_return_forfeited_assets<'a, 'b, 'c>(
     mega_escrow_vault_acc_info: &'a AccountInfo<'b>,
     vault_authority_acc_info: &'a AccountInfo<'b>,
     tok_program_acc_info: &'a AccountInfo<'b>,
-    registrar_nonce: u8,
+    registrar: &'c Registrar,
     spt_amount: u64,
     mega: bool,
 ) -> Result<Vec<u64>, RegistryError> {
-    let last_stake_ctx = &member.last_active_stake_ctx;
-    // The basket amounts the user will actually receive upon withdrawal.
-    let marked_asset_amounts = last_stake_ctx.basket_quantities(spt_amount, mega)?;
+    // The basket amounts the user will receive upon withdrawal.
+    let marked_asset_amounts = member
+        .last_active_stake_ctx
+        .basket_quantities(spt_amount, mega)?;
     assert!(current_asset_amounts.len() == marked_asset_amounts.len());
-    assert!(
-        (mega && current_asset_amounts.len() == 2) || (!mega && current_asset_amounts.len() == 1)
-    );
+    assert!(current_asset_amounts.len() == 2);
+
     // The basket amounts to return to the pool.
     let excess_asset_amounts: Vec<u64> = current_asset_amounts
         .iter()
         .zip(marked_asset_amounts.iter())
         .map(|(current, marked)| current - marked)
         .collect();
-    assert!(
-        (mega && pool.pool_asset_vault_acc_infos.len() == 2)
-            || (!mega && pool.pool_asset_vault_acc_infos.len() == 1)
-    );
-    let signer_seeds = vault::signer_seeds(pool.registrar_acc_info.unwrap().key, &registrar_nonce);
-    // Asset order matters depending on the pool.
-    // SRM pool has one single SRM asset.
-    // MSRM pool has two assets: MSRM, SRM, in that order.
-    let (primary_escrow, secondary_escrow) = {
-        if mega {
-            (mega_escrow_vault_acc_info, Some(escrow_vault_acc_info))
-        } else {
-            (escrow_vault_acc_info, None)
-        }
-    };
-    let transfer_instr = token_instruction::transfer(
-        &spl_token::ID,
-        primary_escrow.key,
-        pool.pool_asset_vault_acc_infos[0].key,
-        vault_authority_acc_info.key,
-        &[],
+    assert!(pool.pool_asset_vault_acc_infos.len() == 2);
+
+    // Transfer the excess SRM and MSRM back to the pool.
+    invoke_token_transfer(
+        escrow_vault_acc_info,
+        pool.pool_asset_vault_acc_infos[0], // SRM.
+        vault_authority_acc_info,
+        tok_program_acc_info,
+        pool.registrar_acc_info.unwrap(),
+        registrar,
         excess_asset_amounts[0],
     )?;
-    solana_sdk::program::invoke_signed(
-        &transfer_instr,
-        &[
-            primary_escrow.clone(),
-            pool.pool_asset_vault_acc_infos[0].clone(),
-            vault_authority_acc_info.clone(),
-            tok_program_acc_info.clone(),
-        ],
-        &[&signer_seeds],
-    )?;
-    if let Some(secondary_escrow) = secondary_escrow {
-        let transfer_instr = token_instruction::transfer(
-            &spl_token::ID,
-            secondary_escrow.key,
-            pool.pool_asset_vault_acc_infos[1].key,
-            vault_authority_acc_info.key,
-            &[],
+    if pool.pool_asset_vault_acc_infos.len() == 2 {
+        invoke_token_transfer(
+            mega_escrow_vault_acc_info,
+            pool.pool_asset_vault_acc_infos[1], // MSRM.
+            vault_authority_acc_info,
+            tok_program_acc_info,
+            pool.registrar_acc_info.unwrap(),
+            registrar,
             excess_asset_amounts[1],
-        )?;
-        solana_sdk::program::invoke_signed(
-            &transfer_instr,
-            &[
-                secondary_escrow.clone(),
-                pool.pool_asset_vault_acc_infos[1].clone(),
-                vault_authority_acc_info.clone(),
-                tok_program_acc_info.clone(),
-            ],
-            &[&signer_seeds],
         )?;
     }
     Ok(marked_asset_amounts)

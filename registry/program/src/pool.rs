@@ -131,12 +131,12 @@ impl<'a, 'b> PoolApi<'a, 'b> {
 }
 
 pub enum PoolConfig<'a, 'b> {
-    Stake {
+    Transact {
         registry_signer_acc_info: &'a AccountInfo<'b>,
         registrar_acc_info: &'a AccountInfo<'b>,
         token_program_acc_info: &'a AccountInfo<'b>,
     },
-    ReadBasket,
+    GetBasket,
 }
 
 pub fn parse_accounts<'a, 'b>(
@@ -172,7 +172,7 @@ pub fn parse_accounts<'a, 'b>(
     let mut registry_signer_acc_info = None;
     let mut registrar_acc_info = None;
     let mut token_program_acc_info = None;
-    if let PoolConfig::Stake {
+    if let PoolConfig::Transact {
         registry_signer_acc_info: _registry_signer_acc_info,
         registrar_acc_info: _registrar_acc_info,
         token_program_acc_info: _token_program_acc_info,

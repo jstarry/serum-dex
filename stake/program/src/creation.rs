@@ -2,8 +2,6 @@ use serum_pool::context::{PoolContext, UserAccounts};
 use serum_pool_schema::{Basket, PoolState};
 use serum_stake::error::{StakeError, StakeErrorCode};
 use solana_program::info;
-use solana_sdk::account_info::AccountInfo;
-use solana_sdk::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
 use spl_token::instruction as token_instruction;
 use std::convert::TryInto;

@@ -40,6 +40,9 @@ pub enum RegistryErrorCode {
     EntityLeaderMismatch = 26,
     EntityMemberMismatch = 27,
     CheckedFailure = 28,
+    AlreadyBurned = 29,
+    WithdrawalTimelockNotPassed = 30,
+    InvalidAssetsLen = 31,
     Unknown = 1000,
 }
 

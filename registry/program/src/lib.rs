@@ -7,6 +7,7 @@ use solana_sdk::account_info::AccountInfo;
 use solana_sdk::entrypoint::ProgramResult;
 use solana_sdk::pubkey::Pubkey;
 
+mod common;
 mod create_entity;
 mod create_member;
 mod end_stake_withdrawal;
@@ -76,6 +77,11 @@ fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8])
             mega,
             delegate,
         } => stake_intent_withdrawal::handler(program_id, accounts, amount, mega, delegate),
+        RegistryInstruction::TransferStakeIntent {
+            amount,
+            mega,
+            delegate,
+        } => transfer_stake_intent::handler(program_id, accounts, amount, mega, delegate),
         RegistryInstruction::Stake {
             amount,
             mega,
@@ -86,14 +92,13 @@ fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8])
             mega,
             delegate,
         } => start_stake_withdrawal::handler(program_id, accounts, amount, mega, delegate),
-        RegistryInstruction::TransferStakeIntent {
-            amount,
-            mega,
-            delegate,
-        } => transfer_stake_intent::handler(program_id, accounts, amount, mega, delegate),
-        RegistryInstruction::EndStakeWithdrawal => Err(RegistryError::ErrorCode(
-            RegistryErrorCode::NotReadySeeNextMajorVersion,
-        )),
+        RegistryInstruction::EndStakeWithdrawal { delegate } => {
+            return Err(RegistryError::ErrorCode(
+                RegistryErrorCode::NotReadySeeNextMajorVersion,
+            ))?;
+        } /*        RegistryInstruction::EndStakeWithdrawal { delegate } => {
+              end_stake_withdrawal::handler(program_id, accounts, delegate)
+          }*/
     };
 
     result?;

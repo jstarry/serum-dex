@@ -1,10 +1,12 @@
 use borsh::BorshSerialize;
 use serum_pool::context::PoolContext;
 use serum_pool_schema::{Basket, PoolState};
-use serum_stake::error::StakeError;
+use serum_stake::error::{StakeError, StakeErrorCode};
 use solana_program::info;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 
+// TODO: rounding changes. Switch to the newly implemented pool-wip updates,
+//       ideally.
 pub fn handler(
     ctx: &PoolContext,
     state: &PoolState,
@@ -17,10 +19,11 @@ pub fn handler(
         // one must deposit the same `spt_amount`. Otherwise, take a
         // `simple_basket`.
         if ctx.total_pool_tokens()? == 0 {
-            let mut quantities = vec![spt_amount as i64];
-            if state.assets.len() == 2 {
-                quantities.push(0);
-            }
+            let quantities = match state.assets.len() {
+                1 => vec![spt_amount as i64],
+                2 => vec![0i64, spt_amount as i64],
+                _ => return Err(StakeErrorCode::InvalidState)?,
+            };
             Basket { quantities }
         } else {
             ctx.get_simple_basket(spt_amount)?

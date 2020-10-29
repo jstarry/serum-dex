@@ -1,4 +1,4 @@
-use crate::accounts::{vault, Entity, Member, Registrar};
+use crate::accounts::{vault, Entity, Member, PendingWithdrawal, Registrar};
 use crate::error::{RegistryError, RegistryErrorCode};
 use serum_common::pack::*;
 use solana_client_gen::solana_sdk;
@@ -169,4 +169,21 @@ pub fn vault_init(
         return Err(RegistryErrorCode::NotRentExempt)?;
     }
     Ok(())
+}
+
+pub fn pending_withdrawal(
+    acc_info: &AccountInfo,
+    program_id: &Pubkey,
+) -> Result<PendingWithdrawal, RegistryError> {
+    let pw = PendingWithdrawal::unpack(&acc_info.try_borrow_data()?)?;
+    if acc_info.owner != program_id {
+        return Err(RegistryErrorCode::InvalidAccountOwner)?;
+    }
+    if !pw.initialized {
+        return Err(RegistryErrorCode::NotInitialized)?;
+    }
+    if pw.burned {
+        return Err(RegistryErrorCode::AlreadyBurned)?;
+    }
+    Ok(pw)
 }

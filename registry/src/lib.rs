@@ -200,7 +200,7 @@ pub mod instruction {
         /// 5. `[]`         SPL mega token program (MSRM).
         /// 6. `[writable]` SRM token account to send to upon redemption
         /// 7. `[writable]` MSRM token account to send to upon redemption
-        EndStakeWithdrawal,
+        EndStakeWithdrawal { delegate: bool },
     }
 }
 

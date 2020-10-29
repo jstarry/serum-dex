@@ -1,7 +1,6 @@
 use crate::accounts::{Member, Registrar};
 use crate::error::{RegistryError, RegistryErrorCode};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use num_enum::IntoPrimitive;
 use serum_common::pack::*;
 use serum_pool_schema::Basket;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
@@ -25,17 +24,12 @@ pub struct Entity {
     pub registrar: Pubkey,
     /// Leader of the entity.
     pub leader: Pubkey,
-    /// Type of stake backing this entity, determining voting rights.
-    pub stake_kind: StakeKind,
     /// Cumulative stake balances from all member accounts.
     pub balances: Balances,
     /// The activation generation number, incremented whenever EntityState
-    /// transitions from `Inactive` -> `Active`. This field is used to determine
-    /// if a Member account is eligible for receiving rewards upon withdrawal
-    /// from the staking pool (the generation of the Member and the Entity must
-    /// be the same).
+    /// transitions from `Inactive` -> `Active`.
     pub generation: u64,
-    /// State of the Entity. See the `EntityState` comments.
+    /// See `EntityState` comments.
     pub state: EntityState,
 }
 
@@ -268,21 +262,6 @@ impl Default for EntityState {
     }
 }
 
-#[derive(
-    Debug, PartialEq, IntoPrimitive, Clone, Copy, BorshSerialize, BorshDeserialize, BorshSchema,
-)]
-#[repr(u32)]
-pub enum StakeKind {
-    Voting,
-    Delegated,
-}
-
-impl Default for StakeKind {
-    fn default() -> Self {
-        StakeKind::Delegated
-    }
-}
-
 /// StakeContext represents the current state of the two node staking pools.
 ///
 /// Each Basket represents an exchange ratio of *1* staking pool token
@@ -334,6 +313,7 @@ impl StakeContext {
     ///
     /// The primary asset refers to SRM or MSRM, depending upon which pool
     /// is being referenced.
+
     pub fn basket_primary_asset(&self, spt_count: u64, mega: bool) -> u64 {
         if mega {
             spt_count * self.mega_basket.quantities[0] as u64

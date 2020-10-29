@@ -3183,7 +3183,6 @@ dependencies = [
  "borsh",
  "bytemuck",
  "lazy_static",
- "num_enum",
  "rand 0.7.3",
  "serum-common",
  "serum-common-tests",

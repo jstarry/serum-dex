@@ -2,16 +2,13 @@ use crate::access_control;
 use serum_common::pack::Pack;
 use serum_lockup::accounts::{Safe, TokenVault};
 use serum_lockup::error::LockupError;
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::program_pack::Pack as TokenPack;
 use solana_sdk::pubkey::Pubkey;
 use std::convert::Into;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
-) -> Result<(), LockupError> {
+pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), LockupError> {
     info!("handler: migrate");
 
     let acc_infos = &mut accounts.iter();
@@ -50,7 +47,7 @@ pub fn handler<'a>(
     Ok(())
 }
 
-fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), LockupError> {
+fn access_control(req: AccessControlRequest) -> Result<(), LockupError> {
     info!("access-control: migrate");
 
     let AccessControlRequest {
@@ -67,7 +64,7 @@ fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), LockupError> 
     Ok(())
 }
 
-fn state_transition<'a, 'b>(req: StateTransitionRequest<'a, 'b>) -> Result<(), LockupError> {
+fn state_transition(req: StateTransitionRequest) -> Result<(), LockupError> {
     info!("state-transition: migrate");
 
     let StateTransitionRequest {
@@ -108,18 +105,18 @@ fn state_transition<'a, 'b>(req: StateTransitionRequest<'a, 'b>) -> Result<(), L
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
+struct AccessControlRequest<'a, 'b> {
     program_id: &'a Pubkey,
-    safe_acc_info: &'a AccountInfo<'a>,
-    safe_authority_acc_info: &'a AccountInfo<'a>,
+    safe_acc_info: &'a AccountInfo<'b>,
+    safe_authority_acc_info: &'a AccountInfo<'b>,
 }
 
-struct StateTransitionRequest<'a, 'b> {
-    safe_acc: &'b mut Safe,
-    safe_acc_info: &'a AccountInfo<'a>,
+struct StateTransitionRequest<'a, 'b, 'c> {
+    safe_acc: &'c mut Safe,
+    safe_acc_info: &'a AccountInfo<'b>,
     safe_vault_amount: u64,
-    safe_vault_acc_info: &'a AccountInfo<'a>,
-    safe_vault_authority_acc_info: &'a AccountInfo<'a>,
-    receiver_spl_acc_info: &'a AccountInfo<'a>,
-    token_program_acc_info: &'a AccountInfo<'a>,
+    safe_vault_acc_info: &'a AccountInfo<'b>,
+    safe_vault_authority_acc_info: &'a AccountInfo<'b>,
+    receiver_spl_acc_info: &'a AccountInfo<'b>,
+    token_program_acc_info: &'a AccountInfo<'b>,
 }

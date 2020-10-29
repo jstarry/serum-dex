@@ -63,10 +63,7 @@ pub mod instruction {
         /// 1. `[signer]`   Leader of the node.
         /// 2. `[]`         Registrar.
         /// 3. `[]`         Rent sysvar.
-        CreateEntity {
-            /// Type of governance backing the `Entity`.
-            stake_kind: accounts::StakeKind,
-        },
+        CreateEntity,
         /// UpdateEntity updates the leader of the node entity.
         ///
         /// Accounts:

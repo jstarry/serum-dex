@@ -36,27 +36,22 @@ pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), Regi
         new_entity_acc_info,
         clock_acc_info,
     })?;
-
+    let member = Member::unpack(&member_acc_info.try_borrow_data()?)?;
     Entity::unpack_mut(
         &mut curr_entity_acc_info.try_borrow_mut_data()?,
         &mut |curr_entity: &mut Entity| {
             Entity::unpack_mut(
                 &mut new_entity_acc_info.try_borrow_mut_data()?,
                 &mut |new_entity: &mut Entity| {
-                    Member::unpack_mut(
-                        &mut member_acc_info.try_borrow_mut_data()?,
-                        &mut |member: &mut Member| {
-                            state_transition(StateTransitionRequest {
-                                member,
-                                curr_entity,
-                                new_entity,
-                                clock: &clock,
-                                registrar: &registrar,
-                                stake_ctx: &stake_ctx,
-                            })
-                            .map_err(Into::into)
-                        },
-                    )
+                    state_transition(StateTransitionRequest {
+                        member: &member,
+                        curr_entity,
+                        new_entity,
+                        clock: &clock,
+                        registrar: &registrar,
+                        stake_ctx: &stake_ctx,
+                    })
+                    .map_err(Into::into)
                 },
             )
         },
@@ -86,7 +81,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
 
     // Account validation.
     let registrar = access_control::registrar(registrar_acc_info, program_id)?;
-    let member = access_control::member(
+    let _member = access_control::member(
         member_acc_info,
         curr_entity_acc_info,
         beneficiary_acc_info,
@@ -143,7 +138,7 @@ struct AccessControlResponse {
 }
 
 struct StateTransitionRequest<'a> {
-    member: &'a mut Member,
+    member: &'a Member,
     curr_entity: &'a mut Entity,
     new_entity: &'a mut Entity,
     stake_ctx: &'a StakeContext,

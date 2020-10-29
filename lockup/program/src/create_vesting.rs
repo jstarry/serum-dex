@@ -2,15 +2,15 @@ use crate::access_control;
 use serum_common::pack::Pack;
 use serum_lockup::accounts::{TokenVault, Vesting};
 use serum_lockup::error::{LockupError, LockupErrorCode};
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::program_option::COption;
 use solana_sdk::pubkey::Pubkey;
 use std::convert::Into;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     vesting_acc_beneficiary: Pubkey,
     end_ts: i64,
     period_count: u64,
@@ -71,7 +71,7 @@ pub fn handler<'a>(
     Ok(())
 }
 
-fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), LockupError> {
+fn access_control(req: AccessControlRequest) -> Result<(), LockupError> {
     info!("access-control: create_vesting");
 
     let AccessControlRequest {
@@ -157,7 +157,7 @@ fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), LockupError> 
     Ok(())
 }
 
-fn state_transition<'a, 'b>(req: StateTransitionRequest<'a, 'b>) -> Result<(), LockupError> {
+fn state_transition(req: StateTransitionRequest) -> Result<(), LockupError> {
     info!("state-transition: create_vesting");
 
     let StateTransitionRequest {
@@ -219,32 +219,32 @@ fn state_transition<'a, 'b>(req: StateTransitionRequest<'a, 'b>) -> Result<(), L
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
+struct AccessControlRequest<'a, 'b> {
     program_id: &'a Pubkey,
     end_ts: i64,
     period_count: u64,
     deposit_amount: u64,
-    vesting_acc_info: &'a AccountInfo<'a>,
-    safe_acc_info: &'a AccountInfo<'a>,
-    depositor_authority_acc_info: &'a AccountInfo<'a>,
-    vault_acc_info: &'a AccountInfo<'a>,
-    nft_mint_acc_info: &'a AccountInfo<'a>,
-    vault_authority_acc_info: &'a AccountInfo<'a>,
-    rent_acc_info: &'a AccountInfo<'a>,
+    vesting_acc_info: &'a AccountInfo<'b>,
+    safe_acc_info: &'a AccountInfo<'b>,
+    depositor_authority_acc_info: &'a AccountInfo<'b>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    nft_mint_acc_info: &'a AccountInfo<'b>,
+    vault_authority_acc_info: &'a AccountInfo<'b>,
+    rent_acc_info: &'a AccountInfo<'b>,
     clock_ts: i64,
 }
 
-struct StateTransitionRequest<'a, 'b> {
+struct StateTransitionRequest<'a, 'b, 'c> {
     clock_ts: i64,
     end_ts: i64,
     period_count: u64,
     deposit_amount: u64,
-    vesting_acc: &'b mut Vesting,
+    vesting_acc: &'c mut Vesting,
     vesting_acc_beneficiary: Pubkey,
-    safe_acc_info: &'a AccountInfo<'a>,
-    depositor_acc_info: &'a AccountInfo<'a>,
-    vault_acc_info: &'a AccountInfo<'a>,
-    depositor_authority_acc_info: &'a AccountInfo<'a>,
-    token_program_acc_info: &'a AccountInfo<'a>,
-    nft_mint_acc_info: &'a AccountInfo<'a>,
+    safe_acc_info: &'a AccountInfo<'b>,
+    depositor_acc_info: &'a AccountInfo<'b>,
+    vault_acc_info: &'a AccountInfo<'b>,
+    depositor_authority_acc_info: &'a AccountInfo<'b>,
+    token_program_acc_info: &'a AccountInfo<'b>,
+    nft_mint_acc_info: &'a AccountInfo<'b>,
 }

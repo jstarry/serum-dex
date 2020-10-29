@@ -23,11 +23,7 @@ mod whitelist_deposit;
 mod whitelist_withdraw;
 
 solana_sdk::entrypoint!(entry);
-fn entry<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
-    instruction_data: &[u8],
-) -> ProgramResult {
+fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     let instruction: LockupInstruction = LockupInstruction::unpack(instruction_data)
         .map_err(|_| LockupError::ErrorCode(LockupErrorCode::WrongSerialization))?;
 

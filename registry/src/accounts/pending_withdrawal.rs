@@ -1,11 +1,7 @@
-use crate::accounts::{vault, Entity, Member, Registrar};
-use crate::error::RegistryError;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use serum_common::pack::Pack;
 use serum_common::pack::*;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
-use solana_sdk::account_info::{next_account_info, AccountInfo};
-use solana_sdk::sysvar::clock::Clock;
 
 /// PendingWithdrawal accounts are created to initiate a withdrawal.
 /// Once the `end_ts` passes, the PendingWithdrawal can be burned in exchange

@@ -1,16 +1,12 @@
 use serum_common::pack::Pack;
 use serum_registry::access_control;
-use serum_registry::accounts::{Entity, EntityState, StakeKind};
+use serum_registry::accounts::{Entity, EntityState};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 
-pub fn handler(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    stake_kind: StakeKind,
-) -> Result<(), RegistryError> {
+pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), RegistryError> {
     info!("handler: create_entity");
 
     let acc_infos = &mut accounts.iter();
@@ -25,7 +21,6 @@ pub fn handler(
         entity_leader_acc_info,
         registrar_acc_info,
         rent_acc_info,
-        stake_kind,
         program_id,
     })?;
 
@@ -35,7 +30,6 @@ pub fn handler(
             state_transition(StateTransitionRequest {
                 leader: entity_leader_acc_info.key,
                 entity,
-                stake_kind,
                 registrar_acc_info,
             })
             .map_err(Into::into)
@@ -53,7 +47,6 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         entity_leader_acc_info,
         registrar_acc_info,
         rent_acc_info,
-        stake_kind,
         program_id,
     } = req;
 
@@ -92,19 +85,15 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     let StateTransitionRequest {
         entity,
         leader,
-        stake_kind,
         registrar_acc_info,
     } = req;
 
     entity.initialized = true;
     entity.registrar = *registrar_acc_info.key;
     entity.generation = 0;
-    entity.stake_kind = stake_kind;
     entity.leader = *leader;
     entity.balances = Default::default();
     entity.state = EntityState::Inactive;
-
-    info!("state-transition: success");
 
     Ok(())
 }
@@ -114,13 +103,11 @@ struct AccessControlRequest<'a, 'b> {
     entity_leader_acc_info: &'a AccountInfo<'b>,
     rent_acc_info: &'a AccountInfo<'b>,
     registrar_acc_info: &'a AccountInfo<'b>,
-    stake_kind: StakeKind,
     program_id: &'a Pubkey,
 }
 
 struct StateTransitionRequest<'a, 'b, 'c> {
-    entity: &'c mut Entity,
     leader: &'a Pubkey,
-    stake_kind: StakeKind,
     registrar_acc_info: &'a AccountInfo<'b>,
+    entity: &'c mut Entity,
 }

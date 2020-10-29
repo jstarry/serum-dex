@@ -9,9 +9,9 @@ use solana_sdk::program_pack::Pack as TokenPack;
 use solana_sdk::pubkey::Pubkey;
 use std::convert::Into;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
+pub fn handler(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     instruction_data: Vec<u8>,
 ) -> Result<(), LockupError> {
     info!("handler: whitelist_deposit");
@@ -186,28 +186,28 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), LockupError> {
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
+struct AccessControlRequest<'a, 'b> {
     program_id: &'a Pubkey,
-    wl_acc_info: &'a AccountInfo<'a>,
-    wl_prog_acc_info: &'a AccountInfo<'a>,
-    wl_prog_vault_authority_acc_info: &'a AccountInfo<'a>,
-    beneficiary_acc_info: &'a AccountInfo<'a>,
-    vesting_acc_info: &'a AccountInfo<'a>,
-    safe_acc_info: &'a AccountInfo<'a>,
-    safe_vault_acc_info: &'a AccountInfo<'a>,
-    safe_vault_auth_acc_info: &'a AccountInfo<'a>,
+    wl_acc_info: &'a AccountInfo<'b>,
+    wl_prog_acc_info: &'a AccountInfo<'b>,
+    wl_prog_vault_authority_acc_info: &'a AccountInfo<'b>,
+    beneficiary_acc_info: &'a AccountInfo<'b>,
+    vesting_acc_info: &'a AccountInfo<'b>,
+    safe_acc_info: &'a AccountInfo<'b>,
+    safe_vault_acc_info: &'a AccountInfo<'b>,
+    safe_vault_auth_acc_info: &'a AccountInfo<'b>,
 }
 
-struct StateTransitionRequest<'a, 'b> {
+struct StateTransitionRequest<'a, 'b, 'c> {
     instruction_data: Vec<u8>,
-    vesting: &'b mut Vesting,
-    accounts: &'a [AccountInfo<'a>],
+    vesting: &'c mut Vesting,
+    accounts: &'a [AccountInfo<'b>],
     nonce: u8,
     safe_acc: &'a Pubkey,
-    safe_vault_acc_info: &'a AccountInfo<'a>,
-    safe_vault_auth_acc_info: &'a AccountInfo<'a>,
-    wl_prog_acc_info: &'a AccountInfo<'a>,
-    wl_prog_vault_authority_acc_info: &'a AccountInfo<'a>,
-    remaining_relay_accs: Vec<&'a AccountInfo<'a>>,
-    tok_prog_acc_info: &'a AccountInfo<'a>,
+    safe_vault_acc_info: &'a AccountInfo<'b>,
+    safe_vault_auth_acc_info: &'a AccountInfo<'b>,
+    wl_prog_acc_info: &'a AccountInfo<'b>,
+    wl_prog_vault_authority_acc_info: &'a AccountInfo<'b>,
+    remaining_relay_accs: Vec<&'a AccountInfo<'b>>,
+    tok_prog_acc_info: &'a AccountInfo<'b>,
 }

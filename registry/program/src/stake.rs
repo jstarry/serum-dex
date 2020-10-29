@@ -157,7 +157,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     Ok(())
 }
 
-#[inline]
+#[inline(always)]
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: stake");
 

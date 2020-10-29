@@ -1,5 +1,7 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
+extern crate solana_sdk as solana_program;
+
 use serum_common::pack::Pack;
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use serum_registry::instruction::RegistryInstruction;
@@ -53,9 +55,7 @@ fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8])
             capability_id,
             capability_fee,
         } => register_capability::handler(program_id, accounts, capability_id, capability_fee),
-        RegistryInstruction::CreateEntity { stake_kind } => {
-            create_entity::handler(program_id, accounts, stake_kind)
-        }
+        RegistryInstruction::CreateEntity => create_entity::handler(program_id, accounts),
         RegistryInstruction::UpdateEntity { leader } => {
             update_entity::handler(program_id, accounts, leader)
         }

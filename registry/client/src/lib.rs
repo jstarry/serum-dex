@@ -95,11 +95,9 @@ impl Client {
     ) -> Result<CreateEntityResponse, ClientError> {
         let CreateEntityRequest {
             node_leader,
-            stake_kind,
             registrar,
         } = req;
-        let (tx, entity) =
-            inner::create_entity_derived(&self.inner, registrar, node_leader, stake_kind)?;
+        let (tx, entity) = inner::create_entity_derived(&self.inner, registrar, node_leader)?;
         Ok(CreateEntityResponse { tx, entity })
     }
 
@@ -638,7 +636,6 @@ pub struct RegisterCapabilityResponse {
 
 pub struct CreateEntityRequest<'a> {
     pub node_leader: &'a Keypair,
-    pub stake_kind: StakeKind,
     pub registrar: Pubkey,
 }
 

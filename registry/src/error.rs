@@ -1,4 +1,3 @@
-use num_enum::IntoPrimitive;
 use solana_client_gen::solana_sdk::program_error::ProgramError;
 use thiserror::Error;
 
@@ -10,7 +9,7 @@ pub enum RegistryError {
     ErrorCode(#[from] RegistryErrorCode),
 }
 
-#[derive(Debug, IntoPrimitive, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(u32)]
 pub enum RegistryErrorCode {
     WrongSerialization = 1,
@@ -56,7 +55,7 @@ impl std::convert::From<RegistryError> for ProgramError {
     fn from(e: RegistryError) -> ProgramError {
         match e {
             RegistryError::ProgramError(e) => e,
-            RegistryError::ErrorCode(c) => ProgramError::Custom(c.into()),
+            RegistryError::ErrorCode(c) => ProgramError::Custom(c as u32),
         }
     }
 }

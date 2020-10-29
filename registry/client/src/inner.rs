@@ -229,7 +229,6 @@ pub fn create_entity_derived(
     client: &InnerClient,
     registrar: Pubkey,
     leader_kp: &Keypair,
-    stake_kind: serum_registry::accounts::StakeKind,
 ) -> Result<(Signature, Pubkey), InnerClientError> {
     let entity_account_size = *serum_registry::accounts::entity::SIZE;
     let lamports = client
@@ -254,7 +253,7 @@ pub fn create_entity_derived(
         AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false),
     ];
     let create_entity_instr =
-        serum_registry::instruction::create_entity(*client.program(), &accounts, stake_kind);
+        serum_registry::instruction::create_entity(*client.program(), &accounts);
     let instructions = [create_acc_instr, create_entity_instr];
     let signers = [leader_kp, client.payer()];
     let (recent_hash, _fee_calc) = client.rpc().get_recent_blockhash()?;

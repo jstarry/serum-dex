@@ -2,15 +2,12 @@ use crate::access_control;
 use serum_common::pack::Pack;
 use serum_lockup::accounts::{Safe, TokenVault, Vesting};
 use serum_lockup::error::{LockupError, LockupErrorCode};
-use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_program::info;
+use solana_sdk::account_info::{next_account_info, AccountInfo};
 use solana_sdk::pubkey::Pubkey;
 use std::convert::Into;
 
-pub fn handler<'a>(
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo<'a>],
-) -> Result<(), LockupError> {
+pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), LockupError> {
     info!("handler: claim");
 
     let acc_infos = &mut accounts.iter();
@@ -53,7 +50,7 @@ pub fn handler<'a>(
     Ok(())
 }
 
-fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), LockupError> {
+fn access_control(req: AccessControlRequest) -> Result<(), LockupError> {
     info!("access-control: claim");
 
     let AccessControlRequest {
@@ -102,7 +99,7 @@ fn access_control<'a>(req: AccessControlRequest<'a>) -> Result<(), LockupError> 
     Ok(())
 }
 
-fn state_transition<'a, 'b>(req: StateTransitionRequest<'a, 'b>) -> Result<(), LockupError> {
+fn state_transition(req: StateTransitionRequest) -> Result<(), LockupError> {
     info!("state-transition: claim");
 
     let StateTransitionRequest {
@@ -143,22 +140,22 @@ fn state_transition<'a, 'b>(req: StateTransitionRequest<'a, 'b>) -> Result<(), L
     Ok(())
 }
 
-struct AccessControlRequest<'a> {
+struct AccessControlRequest<'a, 'b> {
     program_id: &'a Pubkey,
-    safe_acc_info: &'a AccountInfo<'a>,
-    safe_vault_authority_acc_info: &'a AccountInfo<'a>,
-    vesting_acc_info: &'a AccountInfo<'a>,
-    vesting_acc_beneficiary_info: &'a AccountInfo<'a>,
-    mint_acc_info: &'a AccountInfo<'a>,
-    token_acc_info: &'a AccountInfo<'a>,
+    safe_acc_info: &'a AccountInfo<'b>,
+    safe_vault_authority_acc_info: &'a AccountInfo<'b>,
+    vesting_acc_info: &'a AccountInfo<'b>,
+    vesting_acc_beneficiary_info: &'a AccountInfo<'b>,
+    mint_acc_info: &'a AccountInfo<'b>,
+    token_acc_info: &'a AccountInfo<'b>,
 }
 
-struct StateTransitionRequest<'a, 'b> {
-    accounts: &'a [AccountInfo<'a>],
-    safe_acc_info: &'a AccountInfo<'a>,
-    safe_vault_authority_acc_info: &'a AccountInfo<'a>,
-    mint_acc_info: &'a AccountInfo<'a>,
-    token_acc_info: &'a AccountInfo<'a>,
-    vesting_acc: &'b mut Vesting,
+struct StateTransitionRequest<'a, 'b, 'c> {
+    accounts: &'a [AccountInfo<'b>],
+    safe_acc_info: &'a AccountInfo<'b>,
+    safe_vault_authority_acc_info: &'a AccountInfo<'b>,
+    mint_acc_info: &'a AccountInfo<'b>,
+    token_acc_info: &'a AccountInfo<'b>,
+    vesting_acc: &'c mut Vesting,
     nonce: u8,
 }

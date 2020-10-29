@@ -182,8 +182,6 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         return Err(RegistryErrorCode::InsufficientStakeIntentBalance)?;
     }
 
-    info!("access-control: success");
-
     Ok(())
 }
 
@@ -223,8 +221,6 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 
         entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);
     }
-
-    info!("state-transition: success");
 
     Ok(())
 }

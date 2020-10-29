@@ -8,7 +8,7 @@ edition = "2018"
 [workspace]
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib"]
 name = "serum_registry_program"
 
 [features]
@@ -23,10 +23,12 @@ serum-registry = { path = "../" }
 serum-common = { path = "../../common", features = ["program"] }
 serum-stake = { path = "../../stake", features = ["program"] }
 serum-pool-schema = { path = "../../pool/schema", default-features = false, features = ["program"] }
-solana-program = "1.4.3"
+#solana-program = "1.4.3"
 
 [profile.release]
 lto = true
+codegen-units = 8
+panic = 'abort'
 
 [profile.test]
 opt-level = 2

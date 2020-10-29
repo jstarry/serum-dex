@@ -1,9 +1,8 @@
 use serum_common::pack::Pack;
-use serum_pool_schema::{Basket, PoolAction, PoolState};
+use serum_pool_schema::{Basket, PoolAction};
 use serum_registry::accounts::entity::StakeContext;
 use serum_registry::accounts::vault;
 use serum_registry::error::RegistryError;
-use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
 
 // Methods here assume the proper validation has been done prior to constructing

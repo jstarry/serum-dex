@@ -6,10 +6,10 @@ use solana_client_gen::solana_sdk::pubkey::Pubkey;
 lazy_static::lazy_static! {
     pub static ref SIZE: u64 = Registrar::default()
                 .size()
-                .expect("Vesting has a fixed size");
+                .expect("Registrar has a fixed size");
 }
 
-pub const CAPABILITY_LEN: u8 = 16;
+pub const CAPABILITY_LEN: usize = 8;
 
 /// Registry defines the account representing an instance of the program.
 #[derive(Clone, Debug, Default, PartialEq, BorshSerialize, BorshDeserialize, BorshSchema)]
@@ -21,16 +21,15 @@ pub struct Registrar {
     /// Nonce to derive the program-derived address owning the vaults.
     pub nonce: u8,
     /// Maps capability identifier to the fee rate earned for the capability.
-    pub capabilities_fees: [u32; CAPABILITY_LEN as usize],
+    pub capabilities_fees: [u32; CAPABILITY_LEN],
     /// The amount of tokens that must be deposited to be eligible for rewards,
     /// denominated in SRM.
     pub reward_activation_threshold: u64,
     /// Number of seconds that must pass for a withdrawal to complete.
     pub withdrawal_timelock: i64,
     /// Number of seconds *in addition* to the withdrawal timelock it takes for
-    /// an Entity account to be "deactivated"--i.e., cant receive rewards--from
-    /// the moment it's SRM equivalent staked amount drops below the required
-    /// threshold.
+    /// an Entity account to be "deactivated", from the moment it's SRM
+    /// equivalent amount drops below the required threshold.
     pub deactivation_timelock_premium: i64,
     /// Vault holding stake-intent tokens.
     pub vault: Pubkey,

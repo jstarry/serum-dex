@@ -2,6 +2,7 @@ use serum_pool::context::{PoolContext, UserAccounts};
 use serum_pool_schema::Basket;
 use serum_pool_schema::PoolState;
 use serum_stake::error::{StakeError, StakeErrorCode};
+use solana_program::info;
 use solana_sdk::account_info::AccountInfo;
 use spl_token::instruction as token_instruction;
 use std::convert::TryInto;
@@ -11,6 +12,7 @@ pub fn handler(
     state: &mut PoolState,
     spt_amount: u64,
 ) -> Result<(), StakeError> {
+    info!("handler: redemption");
     let &UserAccounts {
         pool_token_account,
         asset_accounts,

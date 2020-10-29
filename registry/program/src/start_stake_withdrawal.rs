@@ -252,10 +252,7 @@ fn pool_return_forfeited_assets<'a, 'b, 'c>(
     spt_amount: u64,
     mega: bool,
 ) -> Result<Vec<u64>, RegistryError> {
-    let last_stake_ctx = member
-        .last_active_stake_ctx
-        .as_ref()
-        .expect("last_active_stake_ctx must be tracked");
+    let last_stake_ctx = &member.last_active_stake_ctx;
     // The basket amounts the user will actually receive upon withdrawal.
     let marked_asset_amounts = last_stake_ctx.basket_quantities(spt_amount, mega)?;
     assert!(current_asset_amounts.len() == marked_asset_amounts.len());

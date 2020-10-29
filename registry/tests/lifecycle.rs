@@ -7,7 +7,7 @@ use serum_lockup_client::{
     InitializeRequest as LockupInitializeRequest, LockedStakeIntentRequest,
     LockedStakeIntentWithdrawalRequest, WhitelistAddRequest,
 };
-use serum_registry::accounts::StakeKind;
+use serum_registry::accounts::registrar::CAPABILITY_LEN;
 use serum_registry_client::*;
 use solana_client_gen::prelude::*;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
@@ -63,7 +63,7 @@ fn lifecycle() {
         let registrar = client.registrar(&registrar).unwrap();
         assert_eq!(registrar.initialized, true);
         assert_eq!(registrar.authority, registrar_authority.pubkey());
-        assert_eq!(registrar.capabilities_fees, [0; 32]);
+        assert_eq!(registrar.capabilities_fees, [0; CAPABILITY_LEN]);
     }
 
     // Initialize the lockup program, vesting account, and whitelist the
@@ -148,7 +148,7 @@ fn lifecycle() {
             .unwrap();
 
         let registrar = client.registrar(&registrar).unwrap();
-        let mut expected = [0; 32];
+        let mut expected = [0; CAPABILITY_LEN];
         expected[capability_id as usize] = capability_fee;
         assert_eq!(registrar.capabilities_fees, expected);
     }
@@ -157,12 +157,9 @@ fn lifecycle() {
     let node_leader = Keypair::generate(&mut OsRng);
     let node_leader_pubkey = node_leader.pubkey();
     let entity = {
-        let stake_kind = StakeKind::Delegated;
-
         let CreateEntityResponse { tx: _, entity } = client
             .create_entity(CreateEntityRequest {
                 node_leader: &node_leader,
-                stake_kind,
                 registrar,
             })
             .unwrap();
@@ -171,7 +168,6 @@ fn lifecycle() {
         assert_eq!(entity_acc.initialized, true);
         assert_eq!(entity_acc.balances.spt_amount, 0);
         assert_eq!(entity_acc.balances.spt_mega_amount, 0);
-        assert_eq!(entity_acc.stake_kind, stake_kind);
         entity
     };
 

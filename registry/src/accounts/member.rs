@@ -40,7 +40,7 @@ pub struct Member {
     /// if a withdrawal happens on an active entity (since rewards might have
     /// been dropped on the staking pool after this member deposited, and
     /// before the entity became inactive, pushing the price up.)
-    pub last_active_stake_ctx: Option<StakeContext>,
+    pub last_active_stake_ctx: StakeContext,
 }
 
 impl Member {
@@ -103,7 +103,7 @@ impl Member {
                 self.books.main.balances.spt_amount += amount;
             }
         }
-        self.last_active_stake_ctx = Some(stake_ctx.clone());
+        self.last_active_stake_ctx = stake_ctx.clone();
     }
     pub fn spt_transfer_pending_withdrawal(&mut self, spt_amount: u64, mega: bool, delegate: bool) {
         if delegate {

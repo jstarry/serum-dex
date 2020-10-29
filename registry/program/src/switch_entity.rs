@@ -37,22 +37,27 @@ pub fn handler(program_id: &Pubkey, accounts: &[AccountInfo]) -> Result<(), Regi
         clock_acc_info,
     })?;
 
-    let member = Member::unpack(&member_acc_info.try_borrow_data()?)?;
-    Entity::unpack_mut(
-        &mut curr_entity_acc_info.try_borrow_mut_data()?,
-        &mut |curr_entity: &mut Entity| {
+    Member::unpack_mut(
+        &mut member_acc_info.try_borrow_mut_data()?,
+        &mut |member: &mut Member| {
             Entity::unpack_mut(
-                &mut new_entity_acc_info.try_borrow_mut_data()?,
-                &mut |new_entity: &mut Entity| {
-                    state_transition(StateTransitionRequest {
-                        curr_entity,
-                        new_entity,
-                        member: &member,
-                        registrar: &registrar,
-                        stake_ctx: &stake_ctx,
-                        clock: &clock,
-                    })
-                    .map_err(Into::into)
+                &mut curr_entity_acc_info.try_borrow_mut_data()?,
+                &mut |curr_entity: &mut Entity| {
+                    Entity::unpack_mut(
+                        &mut new_entity_acc_info.try_borrow_mut_data()?,
+                        &mut |new_entity: &mut Entity| {
+                            state_transition(StateTransitionRequest {
+                                new_entity_acc_info,
+                                curr_entity,
+                                new_entity,
+                                member,
+                                registrar: &registrar,
+                                stake_ctx: &stake_ctx,
+                                clock: &clock,
+                            })
+                            .map_err(Into::into)
+                        },
+                    )
                 },
             )
         },
@@ -102,6 +107,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     info!("state-transition: switch_entity");
 
     let StateTransitionRequest {
+        new_entity_acc_info,
         member,
         curr_entity,
         new_entity,
@@ -115,6 +121,8 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 
     new_entity.add(member);
     new_entity.transition_activation_if_needed(stake_ctx, registrar, clock);
+
+    member.entity = *new_entity_acc_info.key;
 
     Ok(())
 }
@@ -134,8 +142,9 @@ struct AccessControlResponse {
     clock: Clock,
 }
 
-struct StateTransitionRequest<'a> {
-    member: &'a Member,
+struct StateTransitionRequest<'a, 'b> {
+    new_entity_acc_info: &'a AccountInfo<'b>,
+    member: &'a mut Member,
     curr_entity: &'a mut Entity,
     new_entity: &'a mut Entity,
     stake_ctx: &'a StakeContext,

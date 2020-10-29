@@ -13,7 +13,7 @@ pub fn handler(
     delegate: Pubkey,
     watchtower: Watchtower,
 ) -> Result<(), RegistryError> {
-    info!("handler: join_entity");
+    info!("handler: create_member");
 
     let acc_infos = &mut accounts.iter();
 
@@ -30,7 +30,7 @@ pub fn handler(
         program_id,
     })?;
 
-    Member::unpack_mut(
+    Member::unpack_unchecked_mut(
         &mut member_acc_info.try_borrow_mut_data()?,
         &mut |member: &mut Member| {
             state_transition(StateTransitionRequest {
@@ -49,7 +49,7 @@ pub fn handler(
 }
 
 fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
-    info!("access-control: join_entity");
+    info!("access-control: create_member");
 
     let AccessControlRequest {
         member_acc_info,
@@ -63,12 +63,16 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
 
     // Account validation.
     let rent = access_control::rent(rent_acc_info)?;
-    let registrar = access_control::registrar(registrar_acc_info, program_id)?;
-    let entity = access_control::entity(entity_acc_info, registrar_acc_info, program_id)?;
+    let _ = access_control::registrar(registrar_acc_info, program_id)?;
+    let _ = access_control::entity(entity_acc_info, registrar_acc_info, program_id)?;
 
-    // JoinEntity checks.
+    // CreateMember checks.
     {
-        let member = Member::unpack(&member_acc_info.try_borrow_data()?)?;
+        // Use unpoack_unchecked since the data will be zero initialized
+        // and so won't consume the entire slice (since Member has internal
+        // state using Vecs).
+        let mut data: &[u8] = &member_acc_info.try_borrow_data()?;
+        let member = Member::unpack_unchecked(&mut data)?;
         if member_acc_info.owner != program_id {
             return Err(RegistryErrorCode::InvalidAccountOwner)?;
         }
@@ -86,7 +90,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
 }
 
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
-    info!("state-transition: join_entity");
+    info!("state-transition: create_member");
 
     let StateTransitionRequest {
         member,
@@ -104,6 +108,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     member.generation = 0;
     member.watchtower = watchtower;
     member.books = MemberBooks::new(beneficiary, delegate);
+    member.last_active_stake_ctx = Default::default();
 
     info!("state-transition: success");
 

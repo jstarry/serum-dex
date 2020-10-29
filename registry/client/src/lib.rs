@@ -2,7 +2,7 @@ use serum_common::client::rpc;
 use serum_common::pack::*;
 use serum_pool_schema::Basket;
 use serum_pool_schema::PoolState;
-use serum_registry::accounts::{vault, Entity, Member, Registrar, StakeKind};
+use serum_registry::accounts::{vault, Entity, Member, Registrar};
 use serum_registry::client::{Client as InnerClient, ClientError as InnerClientError};
 use solana_client_gen::prelude::*;
 use solana_client_gen::solana_sdk::instruction::AccountMeta;

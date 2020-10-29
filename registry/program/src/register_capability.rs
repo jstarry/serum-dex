@@ -56,7 +56,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         access_control::governance(program_id, registrar_acc_info, registrar_authority_acc_info)?;
 
     // RegisterCapability specific.
-    if capability_id >= CAPABILITY_LEN {
+    if capability_id as usize >= CAPABILITY_LEN {
         return Err(RegistryErrorCode::InvalidCapabilityId)?;
     }
 

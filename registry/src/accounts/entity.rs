@@ -269,7 +269,7 @@ impl Default for EntityState {
 #[derive(BorshSerialize, BorshDeserialize, BorshSchema, Clone, Debug)]
 pub struct StakeContext {
     /// `basket` represents the underlying asset Basket for a *single* SRM
-    /// staking pool token. It  has as single asset: SRM.
+    /// staking pool token. It has as single asset: SRM.
     basket: Basket,
     /// `mega_basket` represents the underlying asset Basket for a *single* MSRM
     /// staking pool token. It has two assets: MSRM and SRM.

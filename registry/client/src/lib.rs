@@ -2,7 +2,7 @@ use serum_common::client::rpc;
 use serum_common::pack::*;
 use serum_pool_schema::Basket;
 use serum_pool_schema::PoolState;
-use serum_registry::accounts::{vault, Entity, Member, Registrar};
+use serum_registry::accounts::{pending_withdrawal, vault, Entity, Member, Registrar};
 use serum_registry::client::{Client as InnerClient, ClientError as InnerClientError};
 use solana_client_gen::prelude::*;
 use solana_client_gen::solana_sdk::instruction::AccountMeta;
@@ -307,14 +307,189 @@ impl Client {
         &self,
         req: StartStakeWithdrawalRequest,
     ) -> Result<StartStakeWithdrawalResponse, ClientError> {
-        Ok(StartStakeWithdrawalResponse {})
+        let StartStakeWithdrawalRequest {
+            registrar,
+            member,
+            entity,
+            beneficiary,
+            spt_amount,
+            mega,
+            user_assets,
+            user_pool_token,
+            user_token_authority,
+            pool_program_id,
+        } = req;
+        let delegate = false;
+
+        let pending_withdrawal = Keypair::generate(&mut OsRng);
+
+        let r = self.registrar(&registrar)?;
+
+        let mut accs = vec![
+            // Whitelist relay interface.
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummu .
+            AccountMeta::new(self.vault_authority(&registrar)?, false),
+            AccountMeta::new_readonly(spl_token::ID, false),
+            // Program specific.
+            AccountMeta::new(pending_withdrawal.pubkey(), false),
+            AccountMeta::new(r.escrow.vault, false),
+            AccountMeta::new(r.escrow.mega_vault, false),
+            AccountMeta::new(member, false),
+            //
+            AccountMeta::new_readonly(beneficiary.pubkey(), true),
+            AccountMeta::new(entity, false),
+            AccountMeta::new_readonly(registrar, false),
+            AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false),
+        ];
+
+        let (mut pool_accounts, _) = self.stake_pool_accounts(
+            pool_program_id,
+            registrar,
+            mega,
+            user_assets,
+            Some(user_pool_token),
+            user_token_authority.pubkey(),
+            true,
+        )?;
+
+        accs.append(&mut pool_accounts);
+
+        let instructions = {
+            let create_pending_withdrawal_instr = {
+                let lamports = self
+                    .rpc()
+                    .get_minimum_balance_for_rent_exemption(*pending_withdrawal::SIZE as usize)
+                    .map_err(InnerClientError::RpcError)?;
+                system_instruction::create_account(
+                    &self.payer().pubkey(),
+                    &registrar,
+                    lamports,
+                    *pending_withdrawal::SIZE,
+                    self.program(),
+                )
+            };
+            let start_stake_withdrawal_instr = serum_registry::instruction::start_stake_withdrawal(
+                *self.program(),
+                &accs,
+                spt_amount,
+                mega,
+                delegate,
+            );
+            [
+                create_pending_withdrawal_instr,
+                start_stake_withdrawal_instr,
+            ]
+        };
+        let tx = {
+            let (recent_hash, _fee_calc) = self
+                .rpc()
+                .get_recent_blockhash()
+                .map_err(|e| InnerClientError::RawError(e.to_string()))?;
+            let signers = [
+                self.payer(),
+                beneficiary,
+                user_token_authority,
+                &pending_withdrawal,
+            ];
+            Transaction::new_signed_with_payer(
+                &instructions,
+                Some(&self.payer().pubkey()),
+                &signers,
+                recent_hash,
+            )
+        };
+
+        self.rpc()
+            .send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                self.inner.options().commitment,
+                self.inner.options().tx,
+            )
+            .map_err(ClientError::RpcError)
+            .map(|tx| StartStakeWithdrawalResponse { tx })
     }
 
     pub fn end_stake_withdrawal(
         &self,
         req: EndStakeWithdrawalRequest,
     ) -> Result<EndStakeWithdrawalResponse, ClientError> {
-        Ok(EndStakeWithdrawalResponse {})
+        let EndStakeWithdrawalRequest {
+            registrar,
+            member,
+            entity,
+            beneficiary,
+            mega,
+            user_assets,
+            user_pool_token,
+            user_token_authority,
+            pool_program_id,
+            pending_withdrawal,
+        } = req;
+        let delegate = false;
+
+        let r = self.registrar(&registrar)?;
+
+        let mut accs = vec![
+            // Whitelist relay interface.
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummu .
+            AccountMeta::new(self.vault_authority(&registrar)?, false),
+            AccountMeta::new_readonly(spl_token::ID, false),
+            // Program specific.
+            AccountMeta::new(pending_withdrawal, false),
+            AccountMeta::new(r.escrow.vault, false),
+            AccountMeta::new(r.escrow.mega_vault, false),
+            AccountMeta::new(member, false),
+            //
+            AccountMeta::new_readonly(beneficiary.pubkey(), true),
+            AccountMeta::new(entity, false),
+            AccountMeta::new_readonly(registrar, false),
+            AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false),
+        ];
+
+        let (mut pool_accounts, _) = self.stake_pool_accounts(
+            pool_program_id,
+            registrar,
+            mega,
+            user_assets,
+            Some(user_pool_token),
+            user_token_authority.pubkey(),
+            true,
+        )?;
+
+        accs.append(&mut pool_accounts);
+
+        let instructions = [serum_registry::instruction::end_stake_withdrawal(
+            *self.program(),
+            &accs,
+            delegate,
+        )];
+
+        let tx = {
+            let (recent_hash, _fee_calc) = self
+                .rpc()
+                .get_recent_blockhash()
+                .map_err(|e| InnerClientError::RawError(e.to_string()))?;
+            let signers = [self.payer(), beneficiary, user_token_authority];
+            Transaction::new_signed_with_payer(
+                &instructions,
+                Some(&self.payer().pubkey()),
+                &signers,
+                recent_hash,
+            )
+        };
+
+        self.rpc()
+            .send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                self.inner.options().commitment,
+                self.inner.options().tx,
+            )
+            .map_err(ClientError::RpcError)
+            .map(|tx| EndStakeWithdrawalResponse { tx })
     }
 
     pub fn common_pool_accounts(
@@ -407,7 +582,7 @@ impl Client {
         depositor: Vec<Pubkey>,
         depositor_pool_token: Option<Pubkey>,
         depositor_authority: Pubkey,
-        depositor_authority_signer: bool,
+        depositor_authority_signer: bool, // true if we need signature for depositor-authority
     ) -> Result<(Vec<AccountMeta>, Pubkey), ClientError> {
         let (mut accounts, main_pool_mint) =
             self.common_pool_accounts(pool_program_id, registrar, mega)?;
@@ -510,6 +685,17 @@ impl Client {
         )?;
 
         Ok((srm_vault, msrm_vault))
+    }
+
+    pub fn escrow_vaults(
+        &self,
+        registrar: &Pubkey,
+    ) -> Result<(TokenAccount, TokenAccount), ClientError> {
+        let r = self.registrar(registrar)?;
+        let escrow = rpc::get_token_account::<TokenAccount>(self.inner.rpc(), &r.escrow.vault)?;
+        let mega_escrow =
+            rpc::get_token_account::<TokenAccount>(self.inner.rpc(), &r.escrow.vault)?;
+        Ok((escrow, mega_escrow))
     }
 }
 
@@ -653,25 +839,39 @@ pub struct StakeIntentWithdrawalResponse {
     pub tx: Signature,
 }
 
-pub struct DelegateStakeRequest {}
+pub struct StartStakeWithdrawalRequest<'a> {
+    pub registrar: Pubkey,
+    pub member: Pubkey,
+    pub entity: Pubkey,
+    pub beneficiary: &'a Keypair,
+    pub spt_amount: u64,
+    pub mega: bool,
+    pub user_assets: Vec<Pubkey>,
+    pub user_pool_token: Pubkey,
+    pub user_token_authority: &'a Keypair,
+    pub pool_program_id: Pubkey,
+}
 
-pub struct DelegateStakeResponse {}
+pub struct StartStakeWithdrawalResponse {
+    pub tx: Signature,
+}
 
-pub struct DelegateStakeIntentRequest {}
+pub struct EndStakeWithdrawalRequest<'a> {
+    pub registrar: Pubkey,
+    pub member: Pubkey,
+    pub entity: Pubkey,
+    pub beneficiary: &'a Keypair,
+    pub mega: bool,
+    pub user_assets: Vec<Pubkey>,
+    pub user_pool_token: Pubkey,
+    pub user_token_authority: &'a Keypair,
+    pub pool_program_id: Pubkey,
+    pub pending_withdrawal: Pubkey,
+}
 
-pub struct DelegateStakeIntentResponse {}
-
-pub struct StartStakeWithdrawalRequest {}
-
-pub struct StartStakeWithdrawalResponse {}
-
-pub struct EndStakeWithdrawalRequest {}
-
-pub struct EndStakeWithdrawalResponse {}
-
-pub struct DonateRequest {}
-
-pub struct DonateResponse {}
+pub struct EndStakeWithdrawalResponse {
+    pub tx: Signature,
+}
 
 #[derive(Debug, Error)]
 pub enum ClientError {

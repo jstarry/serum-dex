@@ -22,25 +22,23 @@ pub fn handler(
 
     let acc_infos = &mut accounts.iter();
 
-    let pending_withdrawal_acc_info = next_account_info(acc_infos)?;
-    let beneficiary_acc_info = next_account_info(acc_infos)?;
-    let member_acc_info = next_account_info(acc_infos)?;
-    let entity_acc_info = next_account_info(acc_infos)?;
-    let registrar_acc_info = next_account_info(acc_infos)?;
-    let escrow_vault_acc_info = next_account_info(acc_infos)?;
-    let mega_escrow_vault_acc_info = next_account_info(acc_infos)?;
+    // Lockup whitelist relay interface.
+    let delegate_owner_acc_info = next_account_info(acc_infos)?;
+    let _dummy_acc_info = next_account_info(acc_infos)?;
     let vault_authority_acc_info = next_account_info(acc_infos)?;
     let tok_program_acc_info = next_account_info(acc_infos)?;
+
+    // Program specific.
+    let pending_withdrawal_acc_info = next_account_info(acc_infos)?;
+    let escrow_vault_acc_info = next_account_info(acc_infos)?;
+    let mega_escrow_vault_acc_info = next_account_info(acc_infos)?;
+
+    let member_acc_info = next_account_info(acc_infos)?;
+    let beneficiary_acc_info = next_account_info(acc_infos)?;
+    let entity_acc_info = next_account_info(acc_infos)?;
+    let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
     let rent_acc_info = next_account_info(acc_infos)?;
-
-    let delegate_owner_acc_info = {
-        if delegate {
-            Some(next_account_info(acc_infos)?)
-        } else {
-            None
-        }
-    };
 
     // Pool accounts.
     let (stake_ctx, pool) = {
@@ -145,7 +143,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         member_acc_info,
         entity_acc_info,
         beneficiary_acc_info,
-        delegate_owner_acc_info,
+        Some(delegate_owner_acc_info),
         delegate,
         program_id,
     )?;
@@ -169,7 +167,11 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
             return Err(RegistryErrorCode::NotRentExempt)?;
         }
         // TODO: check amount/balances being withdraw.
+        //       ensure that if the spt_maount for the "main" book hits zero,
+        //       then the delegate signs off on this.
     }
+
+    // TODO need to check delegate.
 
     info!("access-control: success");
 
@@ -306,7 +308,7 @@ struct AccessControlRequest<'a, 'b> {
     pending_withdrawal_acc_info: &'a AccountInfo<'b>,
     beneficiary_acc_info: &'a AccountInfo<'b>,
     member_acc_info: &'a AccountInfo<'b>,
-    delegate_owner_acc_info: Option<&'a AccountInfo<'b>>,
+    delegate_owner_acc_info: &'a AccountInfo<'b>,
     entity_acc_info: &'a AccountInfo<'b>,
     rent_acc_info: &'a AccountInfo<'b>,
     clock_acc_info: &'a AccountInfo<'b>,

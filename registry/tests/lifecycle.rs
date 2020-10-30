@@ -334,7 +334,7 @@ fn lifecycle() {
     }
 
     // Stake SRM.
-    {
+    let user_pool_token = {
         let StakeResponse {
             tx: _,
             depositor_pool_token,
@@ -347,9 +347,9 @@ fn lifecycle() {
                 depositor: god.pubkey(),
                 depositor_mega: None,
                 depositor_authority: &god_owner,
+                depositor_pool_token: None,
                 pool_token_amount: stake_intent_amount,
                 pool_program_id: stake_pid,
-                depositor_pool_token: None,
             })
             .unwrap();
         let user_pool_token: TokenAccount =
@@ -358,11 +358,43 @@ fn lifecycle() {
         assert_eq!(user_pool_token.owner, god_owner.pubkey());
         let pool_vault = client.stake_pool_asset_vault(&registrar).unwrap();
         assert_eq!(pool_vault.amount, stake_intent_amount);
-    }
+
+        depositor_pool_token
+    };
 
     // Stake withdrawal start.
     {
-        // todo
+        let new_account = rpc::create_token_account(
+            client.rpc(),
+            &srm_mint.pubkey(),
+            &god_owner.pubkey(),
+            client.payer(),
+        )
+        .unwrap()
+        .pubkey();
+        client
+            .start_stake_withdrawal(StartStakeWithdrawalRequest {
+                registrar,
+                entity,
+                member,
+                beneficiary: &beneficiary,
+                spt_amount: stake_intent_amount,
+                mega: false,
+                user_assets: vec![new_account],
+                user_pool_token,
+                user_token_authority: &god_owner,
+                pool_program_id: stake_pid,
+            })
+            .unwrap();
+        let user_asset_token: TokenAccount =
+            rpc::get_token_account(client.rpc(), &new_account).unwrap();
+        assert_eq!(user_asset_token.amount, stake_intent_amount);
+
+        let user_pool_token: TokenAccount =
+            rpc::get_token_account(client.rpc(), &user_pool_token).unwrap();
+        assert_eq!(user_pool_token.amount, 0);
+        let pool_vault = client.stake_pool_asset_vault(&registrar).unwrap();
+        assert_eq!(pool_vault.amount, 0);
     }
 
     // Stake Withdrawal end.

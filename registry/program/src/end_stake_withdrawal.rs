@@ -17,25 +17,22 @@ pub fn handler(
 
     let acc_infos = &mut accounts.iter();
 
-    let pending_withdrawal_acc_info = next_account_info(acc_infos)?;
-    let beneficiary_acc_info = next_account_info(acc_infos)?;
-    let member_acc_info = next_account_info(acc_infos)?;
-    let entity_acc_info = next_account_info(acc_infos)?;
-    let registrar_acc_info = next_account_info(acc_infos)?;
-    let escrow_vault_acc_info = next_account_info(acc_infos)?;
-    let mega_escrow_vault_acc_info = next_account_info(acc_infos)?;
+    // Lockup whitelist relay interface.
+    let delegate_owner_acc_info = next_account_info(acc_infos)?;
+    let user_acc_info = next_account_info(acc_infos)?;
     let vault_authority_acc_info = next_account_info(acc_infos)?;
     let tok_program_acc_info = next_account_info(acc_infos)?;
-    let clock_acc_info = next_account_info(acc_infos)?;
-    let user_acc_info = next_account_info(acc_infos)?;
 
-    let delegate_owner_acc_info = {
-        if delegate {
-            Some(next_account_info(acc_infos)?)
-        } else {
-            None
-        }
-    };
+    // Program specific.
+    let pending_withdrawal_acc_info = next_account_info(acc_infos)?;
+    let escrow_vault_acc_info = next_account_info(acc_infos)?;
+    let mega_escrow_vault_acc_info = next_account_info(acc_infos)?;
+
+    let member_acc_info = next_account_info(acc_infos)?;
+    let beneficiary_acc_info = next_account_info(acc_infos)?;
+    let entity_acc_info = next_account_info(acc_infos)?;
+    let registrar_acc_info = next_account_info(acc_infos)?;
+    let clock_acc_info = next_account_info(acc_infos)?;
 
     let AccessControlResponse { ref registrar } = access_control(AccessControlRequest {
         registrar_acc_info,
@@ -110,7 +107,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         return Err(RegistryErrorCode::Unauthorized)?;
     }
 
-    // TODO: check delegate here.
+    // TODO: check delegate and destination addresses.
 
     // Account validation.
     let clock = access_control::clock(clock_acc_info)?;
@@ -120,7 +117,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         member_acc_info,
         entity_acc_info,
         beneficiary_acc_info,
-        delegate_owner_acc_info,
+        Some(delegate_owner_acc_info),
         delegate,
         program_id,
     )?;
@@ -143,6 +140,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     let StateTransitionRequest {
         pending_withdrawal,
         user_acc_info,
+        //        user_mega_acc_info,
         vault_authority_acc_info,
         tok_program_acc_info,
         registrar,
@@ -172,6 +170,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
             invoke_token_transfer(
                 mega_escrow_vault_acc_info,
                 user_acc_info,
+                //                user_mega_acc_info.expect("provided for mega tokens"),
                 vault_authority_acc_info,
                 tok_program_acc_info,
                 registrar_acc_info,
@@ -204,7 +203,7 @@ struct AccessControlRequest<'a, 'b> {
     pending_withdrawal_acc_info: &'a AccountInfo<'b>,
     beneficiary_acc_info: &'a AccountInfo<'b>,
     member_acc_info: &'a AccountInfo<'b>,
-    delegate_owner_acc_info: Option<&'a AccountInfo<'b>>,
+    delegate_owner_acc_info: &'a AccountInfo<'b>,
     entity_acc_info: &'a AccountInfo<'b>,
     clock_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
@@ -225,6 +224,7 @@ struct StateTransitionRequest<'a, 'b, 'c> {
     vault_authority_acc_info: &'a AccountInfo<'b>,
     tok_program_acc_info: &'a AccountInfo<'b>,
     user_acc_info: &'a AccountInfo<'b>,
+    //    user_mega_acc_info: Option<&'a AccountInfo<'b>>,
     registrar_acc_info: &'a AccountInfo<'b>,
     registrar: &'c Registrar,
     pending_withdrawal: &'c mut PendingWithdrawal,

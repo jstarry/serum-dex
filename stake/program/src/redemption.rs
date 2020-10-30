@@ -63,8 +63,9 @@ pub fn handler(
                 user_token_acc_info.clone(),
                 pool_token_vault_acc_info.clone(),
                 ctx.pool_authority.clone(),
+                ctx.spl_token_program.expect("must be provided").clone(),
             ],
-            &[&[&[state.vault_signer_nonce]]],
+            &[&signer_seeds],
         )?;
     }
 
@@ -89,8 +90,9 @@ pub fn handler(
                 user_token_acc_info.clone(),
                 pool_token_vault_acc_info.clone(),
                 ctx.pool_authority.clone(),
+                ctx.spl_token_program.expect("must be provided").clone(),
             ],
-            &[&[&[state.vault_signer_nonce]]],
+            &[&signer_seeds],
         )?;
     }
 
@@ -110,6 +112,7 @@ pub fn handler(
                 pool_token_account.clone(),
                 ctx.pool_token_mint.clone(),
                 authority.clone(),
+                ctx.spl_token_program.expect("must be provided").clone(),
             ],
             &[&signer_seeds],
         )?;

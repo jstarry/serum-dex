@@ -3,10 +3,17 @@ use serum_common::pack::Pack;
 use serum_common::pack::*;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
 
+#[cfg(feature = "client")]
+lazy_static::lazy_static! {
+    pub static ref SIZE: u64 = PendingWithdrawal::default()
+                .size()
+                .expect("Vesting has a fixed size");
+}
+
 /// PendingWithdrawal accounts are created to initiate a withdrawal.
 /// Once the `end_ts` passes, the PendingWithdrawal can be burned in exchange
 /// for the specified withdrawal amount.
-#[derive(Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
+#[derive(Debug, Default, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct PendingWithdrawal {
     pub initialized: bool,
     /// One time token. True if the withdrawal has been completed.

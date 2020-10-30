@@ -303,25 +303,26 @@ impl StakeContext {
             mega_basket,
         }
     }
+
     /// Returns the amount of SRM the given `spt_amount` staking pool tokens
     /// are worth.
     pub fn srm_equivalent(&self, spt_count: u64, is_mega: bool) -> u64 {
         if is_mega {
-            spt_count * self.mega_basket.quantities[0] as u64 * 1_000_000
-                + spt_count * self.mega_basket.quantities[1] as u64
+            spt_count * self.mega_basket.quantities[0] as u64
+                + spt_count * self.mega_basket.quantities[1] as u64 * 1_000_000
         } else {
             spt_count * self.basket.quantities[0] as u64
         }
     }
+
     /// Returns the number of "primary" assets required to purchase `spt_count`
     /// tokens.
     ///
     /// The primary asset refers to SRM or MSRM, depending upon which pool
     /// is being referenced.
-
     pub fn basket_primary_asset(&self, spt_count: u64, mega: bool) -> u64 {
         if mega {
-            spt_count * self.mega_basket.quantities[0] as u64
+            spt_count * self.mega_basket.quantities[1] as u64
         } else {
             spt_count * self.basket.quantities[0] as u64
         }

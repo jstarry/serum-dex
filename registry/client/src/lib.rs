@@ -574,7 +574,6 @@ impl Client {
         )
         .map_err(Into::into)
     }
-    // TODO: MSRM stake pool.
 }
 
 impl ClientGen for Client {

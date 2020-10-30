@@ -280,9 +280,25 @@ fn lifecycle() {
         assert_eq!(l_vault_amount, l_vault.amount);
     }
 
-    // Activate the node, staking 1 MSRM.
+    // Activate the node, depositing 1 MSRM.
     {
-        let pool_token_amount = 1;
+        client
+            .stake_intent(StakeIntentRequest {
+                member,
+                beneficiary: &beneficiary,
+                entity,
+                depositor: god_msrm.pubkey(),
+                depositor_authority: &god_owner,
+                registrar,
+                amount: 1,
+                pool_program_id: stake_pid,
+                mega: true,
+            })
+            .unwrap();
+    }
+
+    // Stake 1 MSRM.
+    {
         let StakeResponse {
             tx: _,
             depositor_pool_token,
@@ -291,24 +307,39 @@ fn lifecycle() {
                 registrar,
                 entity,
                 member,
-                pool_token_amount,
                 beneficiary: &beneficiary,
-                depositor: god.pubkey(),
-                depositor_mega: Some(god_msrm.pubkey()),
-                depositor_authority: &god_owner,
-                pool_program_id: stake_pid,
                 depositor_pool_token: None,
+                pool_token_amount: 1,
+                pool_program_id: stake_pid,
+                mega: true,
             })
             .unwrap();
         let user_pool_token: TokenAccount =
             rpc::get_token_account(client.rpc(), &depositor_pool_token).unwrap();
-        assert_eq!(user_pool_token.amount, pool_token_amount);
+        assert_eq!(user_pool_token.amount, 1);
         assert_eq!(user_pool_token.owner, god_owner.pubkey());
         // TODO: force the staking pool token owner to be beneficiary?
         // assert_eq!(user_pool_token.owner, beneficiary.pubkey());
         let (srm_vault, msrm_vault) = client.stake_mega_pool_asset_vaults(&registrar).unwrap();
         assert_eq!(srm_vault.amount, 0);
-        assert_eq!(msrm_vault.amount, pool_token_amount);
+        assert_eq!(msrm_vault.amount, 1);
+    }
+
+    // Stake intent more SRM.
+    {
+        client
+            .stake_intent(StakeIntentRequest {
+                member,
+                beneficiary: &beneficiary,
+                entity,
+                depositor: god.pubkey(),
+                depositor_authority: &god_owner,
+                registrar,
+                amount: stake_intent_amount,
+                pool_program_id: stake_pid,
+                mega: false,
+            })
+            .unwrap();
     }
 
     // Stake SRM.
@@ -322,12 +353,10 @@ fn lifecycle() {
                 entity,
                 member,
                 beneficiary: &beneficiary,
-                depositor: god.pubkey(),
-                depositor_mega: None,
-                depositor_authority: &god_owner,
                 depositor_pool_token: None,
                 pool_token_amount: stake_intent_amount,
                 pool_program_id: stake_pid,
+                mega: false,
             })
             .unwrap();
         let user_pool_token: TokenAccount =

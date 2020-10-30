@@ -36,6 +36,7 @@ pub fn handler(
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
     let vault_acc_info = next_account_info(acc_infos)?;
+    let mega_vault_acc_info = next_account_info(acc_infos)?;
 
     let (stake_ctx, _pool) = {
         let cfg = PoolConfig::GetBasket;
@@ -50,6 +51,7 @@ pub fn handler(
         beneficiary_acc_info,
         entity_acc_info,
         vault_acc_info,
+        mega_vault_acc_info,
         token_program_acc_info,
         is_delegate,
         is_mega,
@@ -107,6 +109,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         is_delegate,
         is_mega,
         clock_acc_info,
+        mega_vault_acc_info,
     } = req;
 
     // Beneficiary authorization.
@@ -141,6 +144,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
     )?;
     let vault = access_control::vault(
         vault_acc_info,
+        mega_vault_acc_info,
         registrar_acc_info,
         &registrar,
         program_id,
@@ -214,6 +218,7 @@ struct AccessControlRequest<'a, 'b> {
     entity_acc_info: &'a AccountInfo<'b>,
     token_program_acc_info: &'a AccountInfo<'b>,
     vault_acc_info: &'a AccountInfo<'b>,
+    mega_vault_acc_info: &'a AccountInfo<'b>,
     clock_acc_info: &'a AccountInfo<'b>,
     program_id: &'a Pubkey,
     is_delegate: bool,

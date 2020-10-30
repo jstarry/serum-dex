@@ -344,6 +344,7 @@ impl Client {
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
             AccountMeta::new(r.vault, false),
+            AccountMeta::new(r.mega_vault, false),
         ];
         let (pool_accs, _) = r_client.common_pool_accounts(pool_program_id, registrar, false)?;
         relay_accounts.extend_from_slice(&pool_accs);
@@ -410,6 +411,7 @@ impl Client {
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
             AccountMeta::new(r.vault, false),
+            AccountMeta::new(r.mega_vault, false),
         ];
         let (pool_accs, _) = r_client.common_pool_accounts(pool_program_id, registrar, mega)?;
         relay_accounts.extend_from_slice(&pool_accs);

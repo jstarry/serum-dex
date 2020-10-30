@@ -1,10 +1,9 @@
 use crate::entity::{with_entity, WithEntityRequest};
 use crate::pool::{self, PoolApi, PoolConfig};
 use serum_common::pack::Pack;
-use serum_pool_schema::Basket;
 use serum_registry::access_control;
 use serum_registry::accounts::entity::StakeContext;
-use serum_registry::accounts::{vault, Entity, Member, Registrar};
+use serum_registry::accounts::{Entity, Member, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_program::info;
 use solana_sdk::account_info::{next_account_info, AccountInfo};
@@ -22,19 +21,13 @@ pub fn handler(
 
     let acc_infos = &mut accounts.iter();
 
-    // Lockup whitelist relay interface.
-    let delegate_owner_acc_info = next_account_info(acc_infos)?;
-    let depositor_tok_acc_info = next_account_info(acc_infos)?;
-    let _tok_authority_acc_info = next_account_info(acc_infos)?;
-    let token_program_acc_info = next_account_info(acc_infos)?;
-
-    // Program specific.
     let member_acc_info = next_account_info(acc_infos)?;
     let beneficiary_acc_info = next_account_info(acc_infos)?;
     let entity_acc_info = next_account_info(acc_infos)?;
     let registrar_acc_info = next_account_info(acc_infos)?;
-    let clock_acc_info = next_account_info(acc_infos)?;
     let vault_authority_acc_info = next_account_info(acc_infos)?;
+    let clock_acc_info = next_account_info(acc_infos)?;
+    let token_program_acc_info = next_account_info(acc_infos)?;
 
     // Pool accounts.
     let (stake_ctx, pool) = {
@@ -64,10 +57,8 @@ pub fn handler(
         },
         &mut |entity: &mut Entity, registrar: &Registrar, clock: &Clock| {
             access_control(AccessControlRequest {
-                depositor_tok_acc_info,
                 member_acc_info,
                 registrar_acc_info,
-                delegate_owner_acc_info,
                 beneficiary_acc_info,
                 entity_acc_info,
                 token_program_acc_info,
@@ -104,9 +95,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     info!("access-control: stake");
 
     let AccessControlRequest {
-        depositor_tok_acc_info,
         member_acc_info,
-        delegate_owner_acc_info,
         beneficiary_acc_info,
         entity_acc_info,
         token_program_acc_info,
@@ -131,7 +120,7 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
         member_acc_info,
         entity_acc_info,
         beneficiary_acc_info,
-        Some(delegate_owner_acc_info),
+        None,
         is_delegate,
         program_id,
     )?;
@@ -193,9 +182,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 }
 
 struct AccessControlRequest<'a, 'b, 'c> {
-    depositor_tok_acc_info: &'a AccountInfo<'b>,
     member_acc_info: &'a AccountInfo<'b>,
-    delegate_owner_acc_info: &'a AccountInfo<'b>,
     beneficiary_acc_info: &'a AccountInfo<'b>,
     entity_acc_info: &'a AccountInfo<'b>,
     token_program_acc_info: &'a AccountInfo<'b>,

@@ -189,6 +189,10 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
 
     // TODO need to check delegate.
 
+    // TODO: here and in stake intent withdrawal, we need to make sure we
+    //       don't allow withdrawals such that the cost basis can't be covered
+    //       for delegates.
+
     info!("access-control: success");
 
     Ok(AccessControlResponse { registrar, clock })

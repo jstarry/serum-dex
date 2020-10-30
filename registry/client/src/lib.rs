@@ -134,12 +134,12 @@ impl Client {
             entity,
             depositor,
             depositor_authority,
-            mega,
             registrar,
             amount,
             pool_program_id,
+            mega,
         } = req;
-        let vault = self.registrar(&registrar)?.vault;
+        let r = self.registrar(&registrar)?;
         let delegate = false;
         let mut accounts = vec![
             // Whitelist relay interface,
@@ -153,7 +153,8 @@ impl Client {
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
-            AccountMeta::new(vault, false),
+            AccountMeta::new(r.vault, false),
+            AccountMeta::new(r.mega_vault, false),
         ];
         let (pool_accs, _) = self.common_pool_accounts(pool_program_id, registrar, false)?;
         accounts.extend_from_slice(&pool_accs);
@@ -181,7 +182,6 @@ impl Client {
             pool_program_id,
         } = req;
         let r = self.registrar(&registrar)?;
-        let vault = r.vault;
         let vault_acc = rpc::get_token_account::<TokenAccount>(self.inner.rpc(), &r.vault)?;
         let delegate = false;
         let mut accounts = vec![
@@ -196,7 +196,8 @@ impl Client {
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
             AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
-            AccountMeta::new(vault, false),
+            AccountMeta::new(r.vault, false),
+            AccountMeta::new(r.mega_vault, false),
         ];
         let (pool_accs, _) = self.common_pool_accounts(pool_program_id, registrar, mega)?;
         accounts.extend_from_slice(&pool_accs);
@@ -214,55 +215,38 @@ impl Client {
             member,
             beneficiary,
             entity,
-            depositor,
-            depositor_mega,
             registrar,
             pool_token_amount,
             pool_program_id,
             depositor_pool_token,
+            mega,
         } = req;
-        let mega = depositor_mega.is_some();
-        let mut depositor_assets = vec![depositor];
-        if mega {
-            depositor_assets.push(depositor_mega.expect("must exist for mega stake"));
-        }
+        let r = self.registrar(&registrar)?;
+        let depositor_assets = vec![r.vault, r.mega_vault];
+        let vault_authority = self.vault_authority(&registrar)?;
         let (mut pool_accounts, depositor_pool_token) = self.stake_pool_accounts(
             pool_program_id,
             registrar,
             mega,
             depositor_assets,
             depositor_pool_token,
-            depositor_authority.pubkey(),
-            true,
+            vault_authority,
+            false,
         )?;
 
-        // The account from which funds are flowing into the pool.
-        let primary_depositor = {
-            if mega {
-                depositor_mega.expect("must exit for mega stake")
-            } else {
-                depositor
-            }
-        };
-
         let mut accounts = vec![
-            // Whitelist relay interface.
-            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
-            AccountMeta::new(primary_depositor, false),
-            AccountMeta::new(depositor_authority.pubkey(), true),
-            AccountMeta::new_readonly(spl_token::ID, false),
-            // Program specific.
             AccountMeta::new(member, false),
             AccountMeta::new_readonly(beneficiary.pubkey(), true),
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
-            AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
             AccountMeta::new_readonly(self.vault_authority(&registrar)?, false),
+            AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
+            AccountMeta::new_readonly(spl_token::ID, false),
         ];
 
         accounts.append(&mut pool_accounts);
 
-        let signers = [self.payer(), beneficiary, depositor_authority];
+        let signers = [self.payer(), beneficiary];
 
         let tx = self.inner.stake_with_signers(
             &signers,
@@ -756,15 +740,11 @@ pub struct StakeRequest<'a> {
     pub member: Pubkey,
     pub beneficiary: &'a Keypair,
     pub entity: Pubkey,
-    pub depositor: Pubkey,
-    // Must be Some if `mega` is true.
-    pub depositor_mega: Option<Pubkey>,
-    // Must own `depositor` and `depositor_mega`.
-    pub depositor_authority: &'a Keypair,
     pub registrar: Pubkey,
     pub pool_token_amount: u64,
     pub pool_program_id: Pubkey,
     pub depositor_pool_token: Option<Pubkey>,
+    pub mega: bool,
 }
 
 pub struct StakeResponse {

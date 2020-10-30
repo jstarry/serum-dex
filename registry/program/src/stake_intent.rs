@@ -197,9 +197,8 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         amount,
     )?;
 
-    member.add_stake_intent(amount, is_mega, is_delegate);
-
-    entity.add_stake_intent(amount, is_mega);
+    member.stake_intent_did_deposit(amount, is_mega, is_delegate);
+    entity.stake_intent_did_deposit(amount, is_mega);
     entity.transition_activation_if_needed(stake_ctx, registrar, clock);
 
     Ok(())

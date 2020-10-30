@@ -19,7 +19,7 @@ pub fn handler(
 
     // Lockup whitelist relay interface.
     let delegate_owner_acc_info = next_account_info(acc_infos)?;
-    let user_acc_info = next_account_info(acc_infos)?;
+    let _user_acc_info = next_account_info(acc_infos)?;
     let vault_authority_acc_info = next_account_info(acc_infos)?;
     let tok_program_acc_info = next_account_info(acc_infos)?;
 
@@ -33,6 +33,15 @@ pub fn handler(
     let entity_acc_info = next_account_info(acc_infos)?;
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
+
+    let user_acc_info = next_account_info(acc_infos)?;
+    let user_mega_acc_info = next_account_info(acc_infos)?;
+    let mut user_delegate_acc_info = None;
+    let mut user_delegate_mega_acc_info = None;
+    if delegate {
+        user_delegate_acc_info = Some(next_account_info(acc_infos)?);
+        user_delegate_mega_acc_info = Some(next_account_info(acc_infos)?);
+    }
 
     let AccessControlResponse { ref registrar } = access_control(AccessControlRequest {
         registrar_acc_info,
@@ -62,6 +71,9 @@ pub fn handler(
                             state_transition(StateTransitionRequest {
                                 pending_withdrawal,
                                 user_acc_info,
+                                user_mega_acc_info,
+                                user_delegate_acc_info,
+                                user_delegate_mega_acc_info,
                                 vault_authority_acc_info,
                                 tok_program_acc_info,
                                 registrar,
@@ -140,7 +152,9 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     let StateTransitionRequest {
         pending_withdrawal,
         user_acc_info,
-        //        user_mega_acc_info,
+        user_mega_acc_info,
+        user_delegate_acc_info,
+        user_delegate_mega_acc_info,
         vault_authority_acc_info,
         tok_program_acc_info,
         registrar,
@@ -153,8 +167,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 
     // Send the funds from the escrow vault to the user.
     {
-        let amount_0 = pending_withdrawal.asset_amount;
-        if amount_0 > 0 {
+        if pending_withdrawal.payment.asset_amount > 0 {
             invoke_token_transfer(
                 escrow_vault_acc_info,
                 user_acc_info,
@@ -162,37 +175,49 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
                 tok_program_acc_info,
                 registrar_acc_info,
                 registrar,
-                amount_0,
+                pending_withdrawal.payment.asset_amount,
             )?;
         }
-        let amount_1 = pending_withdrawal.mega_asset_amount;
-        if amount_1 > 0 {
+        if pending_withdrawal.payment.mega_asset_amount > 0 {
             invoke_token_transfer(
                 mega_escrow_vault_acc_info,
-                user_acc_info,
-                //                user_mega_acc_info.expect("provided for mega tokens"),
+                user_mega_acc_info,
                 vault_authority_acc_info,
                 tok_program_acc_info,
                 registrar_acc_info,
                 registrar,
-                amount_1,
+                pending_withdrawal.payment.mega_asset_amount,
+            )?;
+        }
+        if pending_withdrawal.delegate_payment.asset_amount > 0 {
+            let user_delegate_acc_info =
+                user_delegate_acc_info.ok_or(RegistryErrorCode::DelegateAccountsNotProvided)?;
+            invoke_token_transfer(
+                escrow_vault_acc_info,
+                user_delegate_acc_info,
+                vault_authority_acc_info,
+                tok_program_acc_info,
+                registrar_acc_info,
+                registrar,
+                pending_withdrawal.delegate_payment.asset_amount,
+            )?;
+        }
+        if pending_withdrawal.delegate_payment.mega_asset_amount > 0 {
+            let user_delegate_mega_acc_info = user_delegate_mega_acc_info
+                .ok_or(RegistryErrorCode::DelegateAccountsNotProvided)?;
+            invoke_token_transfer(
+                mega_escrow_vault_acc_info,
+                user_delegate_mega_acc_info,
+                vault_authority_acc_info,
+                tok_program_acc_info,
+                registrar_acc_info,
+                registrar,
+                pending_withdrawal.delegate_payment.mega_asset_amount,
             )?;
         }
     }
 
-    // Bookkeeping
-    member.pending_sub(
-        pending_withdrawal.asset_amount,
-        false,
-        pending_withdrawal.delegate,
-    );
-    member.pending_sub(
-        pending_withdrawal.mega_asset_amount,
-        true,
-        pending_withdrawal.delegate,
-    );
-    entity.pending_sub(pending_withdrawal.asset_amount, false);
-    entity.pending_sub(pending_withdrawal.mega_asset_amount, true);
+    // Burn for one time use.
     pending_withdrawal.burned = true;
 
     Ok(())
@@ -206,12 +231,12 @@ struct AccessControlRequest<'a, 'b> {
     delegate_owner_acc_info: &'a AccountInfo<'b>,
     entity_acc_info: &'a AccountInfo<'b>,
     clock_acc_info: &'a AccountInfo<'b>,
-    program_id: &'a Pubkey,
-    delegate: bool,
     escrow_vault_acc_info: &'a AccountInfo<'b>,
     mega_escrow_vault_acc_info: &'a AccountInfo<'b>,
     vault_authority_acc_info: &'a AccountInfo<'b>,
     tok_program_acc_info: &'a AccountInfo<'b>,
+    program_id: &'a Pubkey,
+    delegate: bool,
 }
 
 struct AccessControlResponse {
@@ -223,9 +248,11 @@ struct StateTransitionRequest<'a, 'b, 'c> {
     mega_escrow_vault_acc_info: &'a AccountInfo<'b>,
     vault_authority_acc_info: &'a AccountInfo<'b>,
     tok_program_acc_info: &'a AccountInfo<'b>,
-    user_acc_info: &'a AccountInfo<'b>,
-    //    user_mega_acc_info: Option<&'a AccountInfo<'b>>,
     registrar_acc_info: &'a AccountInfo<'b>,
+    user_acc_info: &'a AccountInfo<'b>,
+    user_mega_acc_info: &'a AccountInfo<'b>,
+    user_delegate_acc_info: Option<&'a AccountInfo<'b>>,
+    user_delegate_mega_acc_info: Option<&'a AccountInfo<'b>>,
     registrar: &'c Registrar,
     pending_withdrawal: &'c mut PendingWithdrawal,
     entity: &'c mut Entity,

@@ -30,10 +30,22 @@ pub struct PendingWithdrawal {
     pub spt_amount: u64,
     /// The pool being withdrawn from.
     pub pool: Pubkey,
+    /// Payment to be sent to the member account's main owner.
+    pub payment: PendingPayment,
+    /// Payment to be sent to the member account's delegate owner.
+    pub delegate_payment: PendingPayment,
+}
+
+#[derive(Debug, Default, BorshSerialize, BorshDeserialize, BorshSchema)]
+pub struct PendingPayment {
     /// The amount of the underlying asset to be received (SRM).
     pub asset_amount: u64,
     /// The amount of the underlying mega asset to be received (MSRM).
     pub mega_asset_amount: u64,
+    /// SRM SPL token account.
+    pub recipient: Pubkey,
+    /// MSRM SPL token account.
+    pub mega_recipient: Pubkey,
 }
 
 serum_common::packable!(PendingWithdrawal);

@@ -216,7 +216,6 @@ impl Client {
             entity,
             depositor,
             depositor_mega,
-            depositor_authority,
             registrar,
             pool_token_amount,
             pool_program_id,

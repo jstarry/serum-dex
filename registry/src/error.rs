@@ -43,6 +43,7 @@ pub enum RegistryErrorCode {
     AlreadyBurned = 29,
     WithdrawalTimelockNotPassed = 30,
     InvalidAssetsLen = 31,
+    DelegateAccountsNotProvided = 32,
     Unknown = 1000,
 }
 

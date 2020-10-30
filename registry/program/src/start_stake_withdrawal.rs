@@ -3,6 +3,7 @@ use crate::pool::{self, PoolApi, PoolConfig};
 use serum_common::pack::Pack;
 use serum_registry::access_control;
 use serum_registry::accounts::entity::{EntityState, StakeContext};
+use serum_registry::accounts::pending_withdrawal::PendingPayment;
 use serum_registry::accounts::{vault, Entity, Member, PendingWithdrawal, Registrar};
 use serum_registry::error::{RegistryError, RegistryErrorCode};
 use solana_program::info;
@@ -39,6 +40,17 @@ pub fn handler(
     let registrar_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
     let rent_acc_info = next_account_info(acc_infos)?;
+
+    let user_acc_info = next_account_info(acc_infos)?;
+    let user_mega_acc_info = next_account_info(acc_infos)?;
+    let user_delegate_acc_info = match delegate {
+        false => None,
+        true => Some(next_account_info(acc_infos)?),
+    };
+    let user_delegate_mega_acc_info = match delegate {
+        false => None,
+        true => Some(next_account_info(acc_infos)?),
+    };
 
     // Pool accounts.
     let (stake_ctx, pool) = {
@@ -95,6 +107,10 @@ pub fn handler(
                                 mega_escrow_vault_acc_info,
                                 vault_authority_acc_info,
                                 tok_program_acc_info,
+                                user_acc_info,
+                                user_mega_acc_info,
+                                user_delegate_acc_info,
+                                user_delegate_mega_acc_info,
                             })
                             .map_err(Into::into)
                         },
@@ -168,7 +184,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         }
         // TODO: check amount/balances being withdraw.
         //       ensure that if the spt_maount for the "main" book hits zero,
-        //       then the delegate signs off on this.
+        //       then the delegate signs off on this and that
     }
 
     // TODO need to check delegate.
@@ -197,10 +213,14 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         mega_escrow_vault_acc_info,
         vault_authority_acc_info,
         tok_program_acc_info,
+        user_acc_info,
+        user_mega_acc_info,
+        user_delegate_acc_info,
+        user_delegate_mega_acc_info,
     } = req;
 
-    // Redeem the `spt_amount` tokens, transferring the underlying basket
-    // of assets into this program's escrow vaults.
+    // Redeem the `spt_amount` tokens for the underlying basket, transferring
+    // the assets into this program's escrow vaults.
     pool.redeem(spt_amount, registrar.nonce)?;
 
     // The amounts that were transferred into the escrow vaults from `redeem`.
@@ -225,23 +245,33 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     }
 
     // Balances bookeeping.
-    member.transfer_pending_withdrawal(spt_amount, &asset_amounts, mega, delegate);
-    entity.transfer_pending_withdrawal(spt_amount, &asset_amounts, mega);
+    let (main_redem, delegate_redem) =
+        member.spt_did_redeem(spt_amount, &asset_amounts, mega, delegate);
+    entity.spt_did_redeem(spt_amount, &asset_amounts, mega);
     entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);
 
     // Print the pending withdrawal receipt.
-    pending_withdrawal.initialized = true;
-    pending_withdrawal.member = *member_acc_info.key;
-    pending_withdrawal.start_ts = clock.unix_timestamp;
-    pending_withdrawal.end_ts = clock.unix_timestamp + registrar.deactivation_timelock();
-    pending_withdrawal.spt_amount = spt_amount;
-    pending_withdrawal.delegate = delegate;
-    pending_withdrawal.asset_amount = asset_amounts[0];
-    pending_withdrawal.mega_asset_amount = match asset_amounts.len() {
-        1 => 0,
-        2 => asset_amounts[1],
-        _ => return Err(RegistryErrorCode::InvalidAssetsLen)?,
-    };
+    {
+        pending_withdrawal.initialized = true;
+        pending_withdrawal.member = *member_acc_info.key;
+        pending_withdrawal.start_ts = clock.unix_timestamp;
+        pending_withdrawal.end_ts = clock.unix_timestamp + registrar.deactivation_timelock();
+        pending_withdrawal.spt_amount = spt_amount;
+        pending_withdrawal.delegate = delegate;
+        pending_withdrawal.payment = PendingPayment {
+            asset_amount: main_redem.asset,
+            mega_asset_amount: main_redem.mega_asset,
+            recipient: *user_acc_info.key,
+            mega_recipient: *user_mega_acc_info.key,
+        };
+        pending_withdrawal.delegate_payment = PendingPayment {
+            asset_amount: delegate_redem.asset,
+            mega_asset_amount: delegate_redem.mega_asset,
+            recipient: user_delegate_acc_info.map_or(Pubkey::new_from_array([0; 32]), |u| *u.key),
+            mega_recipient: user_delegate_mega_acc_info
+                .map_or(Pubkey::new_from_array([0; 32]), |u| *u.key),
+        };
+    }
 
     Ok(())
 }
@@ -331,6 +361,10 @@ struct StateTransitionRequest<'a, 'b, 'c> {
     mega_escrow_vault_acc_info: &'a AccountInfo<'b>,
     vault_authority_acc_info: &'a AccountInfo<'b>,
     tok_program_acc_info: &'a AccountInfo<'b>,
+    user_acc_info: &'a AccountInfo<'b>,
+    user_mega_acc_info: &'a AccountInfo<'b>,
+    user_delegate_acc_info: Option<&'a AccountInfo<'b>>,
+    user_delegate_mega_acc_info: Option<&'a AccountInfo<'b>>,
     pending_withdrawal: &'c mut PendingWithdrawal,
     pool: &'c PoolApi<'a, 'b>,
     entity: &'c mut Entity,

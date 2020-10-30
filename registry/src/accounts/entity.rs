@@ -36,44 +36,30 @@ pub struct Entity {
 impl Entity {
     pub fn remove(&mut self, member: &Member) {
         // Main book remove.
-        self.sub_stake_intent(member.books.main().balances.stake_intent, false);
-        self.sub_stake_intent(member.books.main().balances.mega_stake_intent, true);
+        self.stake_intent_did_withdraw(member.books.main().balances.stake_intent, false);
+        self.stake_intent_did_withdraw(member.books.main().balances.mega_stake_intent, true);
         self.spt_sub(member.books.main().balances.spt_amount, false);
         self.spt_sub(member.books.main().balances.spt_mega_amount, true);
-        self.pending_sub(member.books.main().balances.pending_withdrawals, false);
-        self.pending_sub(member.books.main().balances.mega_pending_withdrawals, true);
 
         // Delegate book remove.
-        self.sub_stake_intent(member.books.delegate().balances.stake_intent, false);
-        self.sub_stake_intent(member.books.delegate().balances.mega_stake_intent, true);
+        self.stake_intent_did_withdraw(member.books.delegate().balances.stake_intent, false);
+        self.stake_intent_did_withdraw(member.books.delegate().balances.mega_stake_intent, true);
         self.spt_sub(member.books.delegate().balances.spt_amount, false);
         self.spt_sub(member.books.delegate().balances.spt_mega_amount, true);
-        self.pending_sub(member.books.delegate().balances.pending_withdrawals, false);
-        self.pending_sub(
-            member.books.delegate().balances.mega_pending_withdrawals,
-            true,
-        );
     }
 
     pub fn add(&mut self, member: &Member) {
         // Main book add.
-        self.add_stake_intent(member.books.main().balances.stake_intent, false);
-        self.add_stake_intent(member.books.main().balances.mega_stake_intent, true);
-        self.spt_add(member.books.main().balances.spt_amount, false);
-        self.spt_add(member.books.main().balances.spt_mega_amount, true);
-        self.pending_add(member.books.main().balances.pending_withdrawals, false);
-        self.pending_add(member.books.main().balances.mega_pending_withdrawals, true);
+        self.stake_intent_did_deposit(member.books.main().balances.stake_intent, false);
+        self.stake_intent_did_deposit(member.books.main().balances.mega_stake_intent, true);
+        self.spt_did_create(member.books.main().balances.spt_amount, false);
+        self.spt_did_create(member.books.main().balances.spt_mega_amount, true);
 
         // Delegate book add.
-        self.add_stake_intent(member.books.delegate().balances.stake_intent, false);
-        self.add_stake_intent(member.books.delegate().balances.mega_stake_intent, true);
-        self.spt_add(member.books.delegate().balances.spt_amount, false);
-        self.spt_add(member.books.delegate().balances.spt_mega_amount, true);
-        self.pending_add(member.books.delegate().balances.pending_withdrawals, false);
-        self.pending_add(
-            member.books.delegate().balances.mega_pending_withdrawals,
-            true,
-        );
+        self.stake_intent_did_deposit(member.books.delegate().balances.stake_intent, false);
+        self.stake_intent_did_deposit(member.books.delegate().balances.mega_stake_intent, true);
+        self.spt_did_create(member.books.delegate().balances.spt_amount, false);
+        self.spt_did_create(member.books.delegate().balances.spt_mega_amount, true);
     }
 
     /// Returns the amount of stake contributing to the activation level.
@@ -82,7 +68,7 @@ impl Entity {
     }
 
     /// Adds to the stake intent balance.
-    pub fn add_stake_intent(&mut self, amount: u64, mega: bool) {
+    pub fn stake_intent_did_deposit(&mut self, amount: u64, mega: bool) {
         if mega {
             self.balances.mega_stake_intent += amount;
         } else {
@@ -91,7 +77,7 @@ impl Entity {
     }
 
     /// Subtracts from the stake intent balance.
-    pub fn sub_stake_intent(&mut self, amount: u64, mega: bool) {
+    pub fn stake_intent_did_withdraw(&mut self, amount: u64, mega: bool) {
         if mega {
             self.balances.mega_stake_intent -= amount;
         } else {
@@ -100,7 +86,7 @@ impl Entity {
     }
 
     /// Adds to the stake balance.
-    pub fn spt_add(&mut self, amount: u64, is_mega: bool) {
+    pub fn spt_did_create(&mut self, amount: u64, is_mega: bool) {
         if is_mega {
             self.balances.spt_mega_amount += amount;
         } else {
@@ -108,7 +94,7 @@ impl Entity {
         }
     }
 
-    pub fn spt_sub(&mut self, amount: u64, is_mega: bool) {
+    fn spt_sub(&mut self, amount: u64, is_mega: bool) {
         if is_mega {
             self.balances.spt_mega_amount -= amount;
         } else {
@@ -116,36 +102,12 @@ impl Entity {
         }
     }
 
-    pub fn transfer_pending_withdrawal(
-        &mut self,
-        spt_amount: u64,
-        asset_amounts: &[u64],
-        mega: bool,
-    ) {
+    pub fn spt_did_redeem(&mut self, spt_amount: u64, asset_amounts: &[u64], mega: bool) {
         assert!((mega && asset_amounts.len() == 2) || (!mega && asset_amounts.len() == 1));
         if mega {
             self.balances.spt_mega_amount -= spt_amount;
-            self.balances.pending_withdrawals += asset_amounts[0];
-            self.balances.mega_pending_withdrawals += asset_amounts[1];
         } else {
             self.balances.spt_amount -= spt_amount;
-            self.balances.pending_withdrawals += asset_amounts[0];
-        }
-    }
-
-    pub fn pending_sub(&mut self, amount: u64, is_mega: bool) {
-        if is_mega {
-            self.balances.mega_pending_withdrawals -= amount;
-        } else {
-            self.balances.pending_withdrawals -= amount;
-        }
-    }
-
-    pub fn pending_add(&mut self, amount: u64, is_mega: bool) {
-        if is_mega {
-            self.balances.mega_pending_withdrawals += amount;
-        } else {
-            self.balances.pending_withdrawals += amount;
         }
     }
 
@@ -215,8 +177,6 @@ pub struct Balances {
     pub spt_amount: u64,
     pub spt_mega_amount: u64,
     // Denopminated in SRM/MSRM.
-    pub pending_withdrawals: u64,
-    pub mega_pending_withdrawals: u64,
     pub stake_intent: u64,
     pub mega_stake_intent: u64,
 }

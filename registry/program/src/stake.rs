@@ -146,11 +146,8 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
             return Err(RegistryErrorCode::StaleStakeNeedsWithdrawal)?;
         }
     }
-    // Only activated nodes can stake. If this spt_amount puts us over the
-    // activation threshold then allow it.
-    let mut e = entity.clone();
-    e.spt_add(spt_amount, is_mega);
-    if !e.meets_activation_requirements(stake_ctx, &registrar) {
+    // Only activated nodes can stake.
+    if !entity.meets_activation_requirements(stake_ctx, &registrar) {
         return Err(RegistryErrorCode::EntityNotActivated)?;
     }
 
@@ -178,10 +175,17 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
 
     // Update accounts for bookeeping.
     {
-        member.spt_add(&stake_ctx, spt_amount, is_mega, is_delegate);
+        // The amount of SRM/MSRM to purchase `spt_amount` tokens.
+        let purchase_price = stake_ctx.basket_quantities(spt_amount, is_mega)?;
         member.generation = entity.generation;
-
-        entity.spt_add(spt_amount, is_mega);
+        member.spt_did_create(
+            &stake_ctx,
+            spt_amount,
+            &purchase_price,
+            is_mega,
+            is_delegate,
+        );
+        entity.spt_did_create(spt_amount, is_mega);
         entity.transition_activation_if_needed(&stake_ctx, &registrar, &clock);
     }
 
@@ -196,22 +200,22 @@ struct AccessControlRequest<'a, 'b, 'c> {
     entity_acc_info: &'a AccountInfo<'b>,
     token_program_acc_info: &'a AccountInfo<'b>,
     registrar_acc_info: &'a AccountInfo<'b>,
-    is_mega: bool,
-    is_delegate: bool,
-    spt_amount: u64,
-    entity: &'c Entity,
     program_id: &'a Pubkey,
     stake_ctx: &'c StakeContext,
+    entity: &'c Entity,
+    spt_amount: u64,
+    is_delegate: bool,
+    is_mega: bool,
 }
 
 struct StateTransitionRequest<'a, 'b, 'c> {
-    entity: &'c mut Entity,
-    member: &'c mut Member,
+    pool: PoolApi<'a, 'b>,
     stake_ctx: &'c StakeContext,
     registrar: &'c Registrar,
+    entity: &'c mut Entity,
+    member: &'c mut Member,
     clock: &'c Clock,
     spt_amount: u64,
-    is_mega: bool,
     is_delegate: bool,
-    pool: PoolApi<'a, 'b>,
+    is_mega: bool,
 }

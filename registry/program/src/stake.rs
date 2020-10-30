@@ -148,10 +148,9 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     }
     // Only activated nodes can stake. If this spt_amount puts us over the
     // activation threshold then allow it.
-    // TODO: this is wrong. Need to call meets_actvation_requirements.
-    let srm_equivalent = stake_ctx.srm_equivalent(spt_amount, is_mega);
-    if srm_equivalent + entity.activation_amount(stake_ctx) < registrar.reward_activation_threshold
-    {
+    let mut e = entity.clone();
+    e.spt_add(spt_amount, is_mega);
+    if !e.meets_activation_requirements(stake_ctx, &registrar) {
         return Err(RegistryErrorCode::EntityNotActivated)?;
     }
 

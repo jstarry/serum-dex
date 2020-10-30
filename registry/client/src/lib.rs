@@ -491,6 +491,26 @@ impl Client {
         )
         .map_err(Into::into)
     }
+
+    pub fn stake_mega_pool_asset_vaults(
+        &self,
+        registrar: &Pubkey,
+    ) -> Result<(TokenAccount, TokenAccount), ClientError> {
+        let pool = self.stake_mega_pool(registrar)?;
+        if pool.assets.len() != 2 {
+            return Err(ClientError::Any(anyhow::anyhow!("invalid asset length")));
+        }
+        let srm_vault = rpc::get_token_account::<TokenAccount>(
+            self.inner.rpc(),
+            &pool.assets[0].vault_address.clone().into(),
+        )?;
+        let msrm_vault = rpc::get_token_account::<TokenAccount>(
+            self.inner.rpc(),
+            &pool.assets[1].vault_address.clone().into(),
+        )?;
+
+        Ok((srm_vault, msrm_vault))
+    }
 }
 
 impl ClientGen for Client {

@@ -16,7 +16,7 @@ lazy_static::lazy_static! {
 
 /// Entity is the account representing a single "node" that addresses can
 /// stake with.
-#[derive(Default, Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
+#[derive(Clone, Default, Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct Entity {
     /// Set when this entity is registered with the program.
     pub initialized: bool,
@@ -209,7 +209,7 @@ impl Entity {
 
 serum_common::packable!(Entity);
 
-#[derive(Default, Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
+#[derive(Clone, Default, Debug, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct Balances {
     // Denominated in staking pool tokens.
     pub spt_amount: u64,
@@ -240,7 +240,7 @@ pub struct Balances {
 ///    from old "generations" must withdraw their entire deposit, before being
 ///    allowed to stake again.
 ///
-#[derive(Debug, BorshSerialize, BorshDeserialize, BorshSchema, PartialEq)]
+#[derive(Clone, Debug, BorshSerialize, BorshDeserialize, BorshSchema, PartialEq)]
 pub enum EntityState {
     /// The entity is ineligble for rewards. Redeeming existing staking pool
     /// tokens will return less than or equal to the original staking deposit.

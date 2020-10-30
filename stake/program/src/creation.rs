@@ -1,5 +1,6 @@
 use serum_pool::context::{PoolContext, UserAccounts};
 use serum_pool_schema::{Basket, PoolState};
+use serum_stake::accounts::vault;
 use serum_stake::error::{StakeError, StakeErrorCode};
 use solana_program::info;
 use solana_sdk::pubkey::Pubkey;
@@ -12,6 +13,7 @@ pub fn handler(
     spt_amount: u64,
 ) -> Result<(), StakeError> {
     info!("handler: creation");
+
     let &UserAccounts {
         pool_token_account,
         asset_accounts,
@@ -21,39 +23,56 @@ pub fn handler(
         .as_ref()
         .expect("transact requests have user accounts");
 
-    // TODO: add a custom account to represent an authority over
-    //       the tokent ransfer (for whitelist withdrawals).
+    assert!(ctx.custom_accounts.len() == 1);
+    assert!(asset_accounts.len() == 1 || asset_accounts.len() == 2);
+    assert!(ctx.pool_vault_accounts.len() == asset_accounts.len());
 
     // Registry authorization.
-    assert!(ctx.custom_accounts.len() == 1);
     let registry_acc_info = &ctx.custom_accounts[0];
     if !registry_acc_info.is_signer {
         return Err(StakeErrorCode::Unauthorized)?;
     }
-    let expected_admin: Pubkey = state.admin_key.clone().expect("had admin key").into();
+    let expected_admin: Pubkey = state.admin_key.clone().expect("must have admin key").into();
     if expected_admin != *registry_acc_info.key {
         return Err(StakeErrorCode::Unauthorized)?;
     }
 
-    // TODO: this will fail for the MSRM pool. Update this.
-    assert!(asset_accounts.len() == 1);
-    assert!(ctx.pool_vault_accounts.len() == 1);
-    let user_token_acc_info = &asset_accounts[0];
-    let pool_token_vault_acc_info = &ctx.pool_vault_accounts[0];
-
-    let asset_amount: u64 = {
+    // Quantities needed to create the `spt_amount` of staking pool tokens.
+    let basket = {
         if ctx.total_pool_tokens()? == 0 {
-            spt_amount
+            if asset_accounts.len() == 1 {
+                Basket {
+                    quantities: vec![spt_amount
+                        .try_into()
+                        .map_err(|_| StakeErrorCode::FailedCast)?],
+                }
+            } else {
+                Basket {
+                    quantities: vec![
+                        0,
+                        spt_amount
+                            .try_into()
+                            .map_err(|_| StakeErrorCode::FailedCast)?,
+                    ],
+                }
+            }
         } else {
-            let Basket { quantities } = ctx.get_simple_basket(spt_amount)?;
-            quantities[0]
-                .try_into()
-                .map_err(|_| StakeErrorCode::InvalidU64)?
+            ctx.get_simple_basket(spt_amount)?
         }
     };
 
-    // Transfer `amount` of the state.assets[0] into the pool's vault.
+    // Sign all CPI invocations, in the event that any of the token
+    // transfers into the vault are (optionally) delegate transfers, where
+    // this program is the approved delegate.
+    let signer_seeds = vault::signer_seeds(ctx.pool_account.key, &state.vault_signer_nonce);
+
+    // Transfer the SRM *into* the pool.
     {
+        let user_token_acc_info = &asset_accounts[0];
+        let pool_token_vault_acc_info = &ctx.pool_vault_accounts[0];
+        let asset_amount = basket.quantities[0]
+            .try_into()
+            .map_err(|_| StakeErrorCode::FailedCast)?;
         let transfer_instr = token_instruction::transfer(
             &spl_token::ID,
             user_token_acc_info.key,
@@ -70,11 +89,38 @@ pub fn handler(
                 authority.clone(),
                 ctx.spl_token_program.expect("must be provided").clone(),
             ],
-            &[],
+            &[&signer_seeds],
         )?;
     }
 
-    // Mint `amount` of state.pool_token_mint.
+    // Transfer the MSRM *into* the pool, if this is indeed the MSRM pool.
+    if asset_accounts.len() == 2 {
+        let user_token_acc_info = &asset_accounts[1];
+        let pool_token_vault_acc_info = &ctx.pool_vault_accounts[1];
+        let asset_amount = basket.quantities[1]
+            .try_into()
+            .map_err(|_| StakeErrorCode::FailedCast)?;
+        let transfer_instr = token_instruction::transfer(
+            &spl_token::ID,
+            user_token_acc_info.key,
+            pool_token_vault_acc_info.key,
+            authority.key,
+            &[],
+            asset_amount,
+        )?;
+        solana_sdk::program::invoke_signed(
+            &transfer_instr,
+            &[
+                user_token_acc_info.clone(),
+                pool_token_vault_acc_info.clone(),
+                authority.clone(),
+                ctx.spl_token_program.expect("must be provided").clone(),
+            ],
+            &[&signer_seeds],
+        )?;
+    }
+
+    // Mint `spt_amount` of staking pool tokens.
     {
         let mint_tokens_instr = token_instruction::mint_to(
             &spl_token::ID,
@@ -82,9 +128,8 @@ pub fn handler(
             pool_token_account.key,
             ctx.pool_authority.key,
             &[],
-            asset_amount,
+            spt_amount,
         )?;
-        let signer_seeds = [ctx.pool_account.key.as_ref(), &[state.vault_signer_nonce]];
         solana_sdk::program::invoke_signed(
             &mint_tokens_instr,
             &[

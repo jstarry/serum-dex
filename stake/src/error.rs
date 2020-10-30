@@ -17,6 +17,7 @@ pub enum StakeErrorCode {
     Unauthorized = 1,
     InvalidU64 = 2,
     InvalidState = 3,
+    FailedCast = 4,
     Unknown = 1000,
 }
 

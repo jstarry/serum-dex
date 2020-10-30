@@ -25,7 +25,7 @@ fn lifecycle() {
         msrm_mint,
         mint_authority: _,
         god,
-        god_msrm: _,
+        god_msrm,
         god_balance_before: _,
         god_msrm_balance_before: _,
         god_owner,
@@ -302,7 +302,38 @@ fn lifecycle() {
         assert_eq!(l_vault_amount, l_vault.amount);
     }
 
-    // Stake.
+    // Activate the node, staking 1 MSRM.
+    {
+        let pool_token_amount = 1;
+        let StakeResponse {
+            tx: _,
+            depositor_pool_token,
+        } = client
+            .stake(StakeRequest {
+                registrar,
+                entity,
+                member,
+                pool_token_amount,
+                beneficiary: &beneficiary,
+                depositor: god.pubkey(),
+                depositor_mega: Some(god_msrm.pubkey()),
+                depositor_authority: &god_owner,
+                pool_program_id: stake_pid,
+                depositor_pool_token: None,
+            })
+            .unwrap();
+        let user_pool_token: TokenAccount =
+            rpc::get_token_account(client.rpc(), &depositor_pool_token).unwrap();
+        assert_eq!(user_pool_token.amount, pool_token_amount);
+        assert_eq!(user_pool_token.owner, god_owner.pubkey());
+        // TODO: force the staking pool token owner to be beneficiary?
+        // assert_eq!(user_pool_token.owner, beneficiary.pubkey());
+        let (srm_vault, msrm_vault) = client.stake_mega_pool_asset_vaults(&registrar).unwrap();
+        assert_eq!(srm_vault.amount, 0);
+        assert_eq!(msrm_vault.amount, pool_token_amount);
+    }
+
+    // Stake SRM.
     {
         let StakeResponse {
             tx: _,

@@ -329,48 +329,6 @@ fn lifecycle() {
         assert_eq!(pool_vault.amount, stake_intent_amount);
     }
 
-    // Stake intent transfer.
-    {
-        // First deposit the stake intent.
-        client
-            .stake_intent(StakeIntentRequest {
-                member,
-                beneficiary: &beneficiary,
-                entity,
-                depositor: god.pubkey(),
-                depositor_authority: &god_owner,
-                mega: false,
-                registrar,
-                amount: stake_intent_amount,
-                pool_program_id: stake_pid,
-            })
-            .unwrap();
-        // Now transfer it to the staking pool.
-        let pool_token_amount = 10;
-        let StakeIntentTransferResponse {
-            tx: _,
-            depositor_pool_token,
-        } = client
-            .stake_intent_transfer(StakeIntentTransferRequest {
-                member,
-                beneficiary: &beneficiary,
-                entity,
-                registrar,
-                pool_token_amount,
-                pool_program_id: stake_pid,
-                depositor_pool_token: None,
-                mega: false,
-            })
-            .unwrap();
-        let vault = client.stake_intent_vault(&registrar).unwrap();
-        assert_eq!(stake_intent_amount - pool_token_amount, vault.amount);
-        let user_pool_token: TokenAccount =
-            rpc::get_token_account(client.rpc(), &depositor_pool_token).unwrap();
-        assert_eq!(user_pool_token.amount, pool_token_amount);
-        let pool_vault = client.stake_pool_asset_vault(&registrar).unwrap();
-        assert_eq!(pool_vault.amount, stake_intent_amount + pool_token_amount);
-    }
-
     // Stake withdrawal start.
     {
         // todo

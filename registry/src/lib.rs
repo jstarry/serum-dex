@@ -143,15 +143,6 @@ pub mod instruction {
             mega: bool,
             delegate: bool,
         },
-        /// Uses the stake intent balance to purchase `amount` staking pool
-        /// tokens.
-        ///
-        ///
-        TransferStakeIntent {
-            amount: u64,
-            mega: bool,
-            delegate: bool,
-        },
         /// Accounts:
         ///
         /// Same as StakeIntent, substituting Accounts[1] for the pool's vault.

@@ -303,89 +303,6 @@ impl Client {
         })
     }
 
-    pub fn stake_intent_transfer(
-        &self,
-        req: StakeIntentTransferRequest,
-    ) -> Result<StakeIntentTransferResponse, ClientError> {
-        let StakeIntentTransferRequest {
-            member,
-            beneficiary,
-            entity,
-            registrar,
-            pool_token_amount,
-            pool_program_id,
-            depositor_pool_token,
-            mega,
-        } = req;
-        let r = self.registrar(&registrar)?;
-        // Depositor is the registry program's vault, since this is an
-        // internal transfer from the stake-intent vault to the staking pool.
-        let depositor = r.vault;
-        let depositor_mega = {
-            if mega {
-                Some(r.mega_vault)
-            } else {
-                None
-            }
-        };
-        let depositor_authority = self.vault_authority(&registrar)?;
-
-        let mut depositor_assets = vec![depositor];
-        if mega {
-            depositor_assets.push(depositor_mega.expect("must exist for mega stake"));
-        }
-        let (mut pool_accounts, depositor_pool_token) = self.stake_pool_accounts(
-            pool_program_id,
-            registrar,
-            mega,
-            depositor_assets,
-            depositor_pool_token,
-            depositor_authority,
-            false,
-        )?;
-
-        // The account from which funds are flowing into the pool.
-        let primary_depositor = {
-            if mega {
-                depositor_mega.expect("must exit for mega stake")
-            } else {
-                depositor
-            }
-        };
-
-        let mut accounts = vec![
-            // Whitelist relay interface.
-            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false), // Dummy.
-            AccountMeta::new(primary_depositor, false),
-            AccountMeta::new(depositor_authority, false),
-            AccountMeta::new_readonly(spl_token::ID, false),
-            // Program specific.
-            AccountMeta::new(member, false),
-            AccountMeta::new_readonly(beneficiary.pubkey(), true),
-            AccountMeta::new(entity, false),
-            AccountMeta::new_readonly(registrar, false),
-            AccountMeta::new_readonly(solana_sdk::sysvar::clock::ID, false),
-            AccountMeta::new_readonly(self.vault_authority(&registrar)?, false),
-        ];
-
-        accounts.append(&mut pool_accounts);
-
-        let signers = [self.payer(), beneficiary];
-
-        let tx = self.inner.stake_with_signers(
-            &signers,
-            &accounts,
-            pool_token_amount,
-            mega,
-            false, // Not a delegate.
-        )?;
-
-        Ok(StakeIntentTransferResponse {
-            tx,
-            depositor_pool_token,
-        })
-    }
-
     pub fn start_stake_withdrawal(
         &self,
         req: StartStakeWithdrawalRequest,
@@ -699,22 +616,6 @@ pub struct StakeIntentRequest<'a> {
 
 pub struct StakeIntentResponse {
     pub tx: Signature,
-}
-
-pub struct StakeIntentTransferRequest<'a> {
-    pub member: Pubkey,
-    pub beneficiary: &'a Keypair,
-    pub entity: Pubkey,
-    pub registrar: Pubkey,
-    pub pool_token_amount: u64,
-    pub pool_program_id: Pubkey,
-    pub depositor_pool_token: Option<Pubkey>,
-    pub mega: bool,
-}
-
-pub struct StakeIntentTransferResponse {
-    pub tx: Signature,
-    pub depositor_pool_token: Pubkey,
 }
 
 pub struct StakeIntentWithdrawalRequest<'a> {

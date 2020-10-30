@@ -40,20 +40,6 @@ pub mod instruction {
             /// Address of the MSRM staking pool.
             mega_pool: Pubkey,
         },
-        /// RegisterCapability registers a node capability for reward
-        /// collection, or overwrites an existing capability (e.g., on fee
-        /// change).
-        ///
-        /// Accounts:
-        ///
-        /// 0. `[signer]`   Registrar authority.
-        /// 1. `[writable]` Registrar instance.
-        RegisterCapability {
-            /// The identifier to assign this capability.
-            capability_id: u8,
-            /// Capability fee interpreted by external program.
-            capability_fee: u32,
-        },
         /// CreateEntity initializes the new "node" with the Registry,
         /// designated "inactive".
         ///

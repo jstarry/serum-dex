@@ -65,30 +65,6 @@ impl Client {
         })
     }
 
-    pub fn register_capability(
-        &self,
-        req: RegisterCapabilityRequest,
-    ) -> Result<RegisterCapabilityResponse, ClientError> {
-        let RegisterCapabilityRequest {
-            registrar,
-            registrar_authority,
-            capability_id,
-            capability_fee,
-        } = req;
-        let accounts = [
-            AccountMeta::new_readonly(registrar_authority.pubkey(), true),
-            AccountMeta::new(registrar, false),
-        ];
-        let signers = [registrar_authority, self.payer()];
-        let tx = self.inner.register_capability_with_signers(
-            &signers,
-            &accounts,
-            capability_id,
-            capability_fee,
-        )?;
-        Ok(RegisterCapabilityResponse { tx })
-    }
-
     pub fn create_entity(
         &self,
         req: CreateEntityRequest,
@@ -739,17 +715,6 @@ pub struct InitializeResponse {
     pub pool_vault_signer_nonce: u8,
     pub mega_pool: Pubkey,
     pub mega_pool_vault_signer_nonce: u8,
-}
-
-pub struct RegisterCapabilityRequest<'a> {
-    pub registrar: Pubkey,
-    pub registrar_authority: &'a Keypair,
-    pub capability_id: u8,
-    pub capability_fee: u32,
-}
-
-pub struct RegisterCapabilityResponse {
-    pub tx: Signature,
 }
 
 pub struct CreateEntityRequest<'a> {

@@ -9,8 +9,6 @@ lazy_static::lazy_static! {
                 .expect("Registrar has a fixed size");
 }
 
-pub const CAPABILITY_LEN: usize = 8;
-
 /// Registry defines the account representing an instance of the program.
 #[derive(Clone, Debug, Default, PartialEq, BorshSerialize, BorshDeserialize, BorshSchema)]
 pub struct Registrar {
@@ -20,8 +18,6 @@ pub struct Registrar {
     pub authority: Pubkey,
     /// Nonce to derive the program-derived address owning the vaults.
     pub nonce: u8,
-    /// Maps capability identifier to the fee rate earned for the capability.
-    pub capabilities_fees: [u32; CAPABILITY_LEN],
     /// The amount of tokens that must be deposited to be eligible for rewards,
     /// denominated in SRM.
     pub reward_activation_threshold: u64,
@@ -44,24 +40,8 @@ pub struct Registrar {
 }
 
 impl Registrar {
-    /// Returns the capability id of the next available slot. Otherwise None,
-    /// if full.
-    pub fn next_free_capability_id(&self) -> Option<u8> {
-        for (idx, c) in self.capabilities_fees.iter().enumerate() {
-            if *c == 0 {
-                return Some(idx as u8);
-            }
-        }
-        None
-    }
-
     pub fn deactivation_timelock(&self) -> i64 {
         self.deactivation_timelock_premium + self.withdrawal_timelock
-    }
-
-    // Assumes capability_id <= CAPABILITY_SIZE.
-    pub fn fee_rate(&self, capability_id: usize) -> u32 {
-        self.capabilities_fees[capability_id]
     }
 }
 

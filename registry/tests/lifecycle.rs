@@ -7,7 +7,6 @@ use serum_lockup_client::{
     InitializeRequest as LockupInitializeRequest, LockedStakeIntentRequest,
     LockedStakeIntentWithdrawalRequest, WhitelistAddRequest,
 };
-use serum_registry::accounts::registrar::CAPABILITY_LEN;
 use serum_registry_client::*;
 use solana_client_gen::prelude::*;
 use solana_client_gen::solana_sdk::pubkey::Pubkey;
@@ -63,7 +62,6 @@ fn lifecycle() {
         let registrar = client.registrar(&registrar).unwrap();
         assert_eq!(registrar.initialized, true);
         assert_eq!(registrar.authority, registrar_authority.pubkey());
-        assert_eq!(registrar.capabilities_fees, [0; CAPABILITY_LEN]);
     }
 
     // Initialize the lockup program, vesting account, and whitelist the
@@ -132,26 +130,6 @@ fn lifecycle() {
             init_resp.vault_authority,
         )
     };
-
-    // Register capabilities.
-    {
-        let capability_id = 1;
-        let capability_fee = 1234;
-
-        let _ = client
-            .register_capability(RegisterCapabilityRequest {
-                registrar,
-                registrar_authority: &registrar_authority,
-                capability_id,
-                capability_fee,
-            })
-            .unwrap();
-
-        let registrar = client.registrar(&registrar).unwrap();
-        let mut expected = [0; CAPABILITY_LEN];
-        expected[capability_id as usize] = capability_fee;
-        assert_eq!(registrar.capabilities_fees, expected);
-    }
 
     // Create entity.
     let node_leader = Keypair::generate(&mut OsRng);

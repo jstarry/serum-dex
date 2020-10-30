@@ -14,7 +14,6 @@ mod end_stake_withdrawal;
 mod entity;
 mod initialize;
 mod pool;
-mod register_capability;
 mod stake;
 mod stake_intent;
 mod stake_intent_withdrawal;
@@ -48,10 +47,6 @@ fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8])
             pool,
             mega_pool,
         ),
-        RegistryInstruction::RegisterCapability {
-            capability_id,
-            capability_fee,
-        } => register_capability::handler(program_id, accounts, capability_id, capability_fee),
         RegistryInstruction::CreateEntity => create_entity::handler(program_id, accounts),
         RegistryInstruction::UpdateEntity { leader } => {
             update_entity::handler(program_id, accounts, leader)

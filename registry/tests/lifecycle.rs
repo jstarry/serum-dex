@@ -4,8 +4,8 @@ use serum_common_tests::Genesis;
 use serum_lockup::accounts::WhitelistEntry;
 use serum_lockup_client::{
     ClaimRequest, Client as LockupClient, CreateVestingRequest,
-    InitializeRequest as LockupInitializeRequest, LockedStakeIntentRequest,
-    LockedStakeIntentWithdrawalRequest, WhitelistAddRequest,
+    InitializeRequest as LockupInitializeRequest, RegistryDepositRequest, RegistryWithdrawRequest,
+    WhitelistAddRequest,
 };
 use serum_registry_client::*;
 use solana_client_gen::prelude::*;
@@ -195,7 +195,7 @@ fn lifecycle() {
     let stake_intent_amount = 100;
     {
         client
-            .stake_intent(StakeIntentRequest {
+            .deposit(DepositRequest {
                 member,
                 beneficiary: &beneficiary,
                 entity,
@@ -216,7 +216,7 @@ fn lifecycle() {
     // Stake intent withdrawal.
     {
         client
-            .stake_intent_withdrawal(StakeIntentWithdrawalRequest {
+            .withdraw(WithdrawRequest {
                 member,
                 beneficiary: &beneficiary,
                 entity,
@@ -237,7 +237,7 @@ fn lifecycle() {
     let l_vault_amount = l_client.vault(&safe).unwrap().amount;
     {
         l_client
-            .locked_stake_intent(LockedStakeIntentRequest {
+            .registry_deposit(RegistryDepositRequest {
                 amount: stake_intent_amount,
                 mega: false,
                 registry_pid: *client.program(),
@@ -260,7 +260,7 @@ fn lifecycle() {
     // Stake intent withdrawal back to lockup.
     {
         l_client
-            .locked_stake_intent_withdrawal(LockedStakeIntentWithdrawalRequest {
+            .registry_withdraw(RegistryWithdrawRequest {
                 amount: stake_intent_amount,
                 mega: false,
                 registry_pid: *client.program(),
@@ -283,7 +283,7 @@ fn lifecycle() {
     // Activate the node, depositing 1 MSRM.
     {
         client
-            .stake_intent(StakeIntentRequest {
+            .deposit(DepositRequest {
                 member,
                 beneficiary: &beneficiary,
                 entity,
@@ -328,7 +328,7 @@ fn lifecycle() {
     // Stake intent more SRM.
     {
         client
-            .stake_intent(StakeIntentRequest {
+            .deposit(DepositRequest {
                 member,
                 beneficiary: &beneficiary,
                 entity,

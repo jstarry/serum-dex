@@ -10,17 +10,17 @@ use solana_sdk::pubkey::Pubkey;
 mod common;
 mod create_entity;
 mod create_member;
+mod deposit;
 mod end_stake_withdrawal;
 mod entity;
 mod initialize;
 mod pool;
 mod stake;
-mod stake_intent;
-mod stake_intent_withdrawal;
 mod start_stake_withdrawal;
 mod switch_entity;
 mod update_entity;
 mod update_member;
+mod withdraw;
 
 solana_program::entrypoint!(entry);
 fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
@@ -61,16 +61,16 @@ fn entry(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8])
             delegate,
         } => update_member::handler(program_id, accounts, watchtower, delegate),
         RegistryInstruction::SwitchEntity => switch_entity::handler(program_id, accounts),
-        RegistryInstruction::StakeIntent {
+        RegistryInstruction::Deposit {
             amount,
             mega,
             delegate,
-        } => stake_intent::handler(program_id, accounts, amount, mega, delegate),
-        RegistryInstruction::StakeIntentWithdrawal {
+        } => deposit::handler(program_id, accounts, amount, mega, delegate),
+        RegistryInstruction::Withdraw {
             amount,
             mega,
             delegate,
-        } => stake_intent_withdrawal::handler(program_id, accounts, amount, mega, delegate),
+        } => withdraw::handler(program_id, accounts, amount, mega, delegate),
         RegistryInstruction::Stake {
             amount,
             mega,

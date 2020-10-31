@@ -124,11 +124,8 @@ impl Client {
         Ok(CreateMemberResponse { tx, member })
     }
 
-    pub fn stake_intent(
-        &self,
-        req: StakeIntentRequest,
-    ) -> Result<StakeIntentResponse, ClientError> {
-        let StakeIntentRequest {
+    pub fn deposit(&self, req: DepositRequest) -> Result<DepositResponse, ClientError> {
+        let DepositRequest {
             member,
             beneficiary,
             entity,
@@ -162,16 +159,13 @@ impl Client {
 
         let tx = self
             .inner
-            .stake_intent_with_signers(&signers, &accounts, amount, mega, delegate)?;
+            .deposit_with_signers(&signers, &accounts, amount, mega, delegate)?;
 
-        Ok(StakeIntentResponse { tx })
+        Ok(DepositResponse { tx })
     }
 
-    pub fn stake_intent_withdrawal(
-        &self,
-        req: StakeIntentWithdrawalRequest,
-    ) -> Result<StakeIntentWithdrawalResponse, ClientError> {
-        let StakeIntentWithdrawalRequest {
+    pub fn withdraw(&self, req: WithdrawRequest) -> Result<WithdrawResponse, ClientError> {
+        let WithdrawRequest {
             member,
             beneficiary,
             entity,
@@ -205,9 +199,9 @@ impl Client {
 
         let tx = self
             .inner
-            .stake_intent_withdrawal_with_signers(&signers, &accounts, amount, mega, delegate)?;
+            .withdraw_with_signers(&signers, &accounts, amount, mega, delegate)?;
 
-        Ok(StakeIntentWithdrawalResponse { tx })
+        Ok(WithdrawResponse { tx })
     }
 
     pub fn stake(&self, req: StakeRequest) -> Result<StakeResponse, ClientError> {
@@ -752,7 +746,7 @@ pub struct StakeResponse {
     pub depositor_pool_token: Pubkey,
 }
 
-pub struct StakeIntentRequest<'a> {
+pub struct DepositRequest<'a> {
     pub member: Pubkey,
     pub beneficiary: &'a Keypair,
     pub entity: Pubkey,
@@ -764,11 +758,11 @@ pub struct StakeIntentRequest<'a> {
     pub pool_program_id: Pubkey,
 }
 
-pub struct StakeIntentResponse {
+pub struct DepositResponse {
     pub tx: Signature,
 }
 
-pub struct StakeIntentWithdrawalRequest<'a> {
+pub struct WithdrawRequest<'a> {
     pub member: Pubkey,
     pub beneficiary: &'a Keypair,
     pub entity: Pubkey,
@@ -779,7 +773,7 @@ pub struct StakeIntentWithdrawalRequest<'a> {
     pub pool_program_id: Pubkey,
 }
 
-pub struct StakeIntentWithdrawalResponse {
+pub struct WithdrawResponse {
     pub tx: Signature,
 }
 

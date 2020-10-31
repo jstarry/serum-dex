@@ -296,11 +296,11 @@ impl Client {
         Ok(MigrateResponse { tx })
     }
 
-    pub fn locked_stake_intent(
+    pub fn registry_deposit(
         &self,
-        req: LockedStakeIntentRequest,
-    ) -> Result<LockedStakeIntentResponse, ClientError> {
-        let LockedStakeIntentRequest {
+        req: RegistryDepositRequest,
+    ) -> Result<RegistryDepositResponse, ClientError> {
+        let RegistryDepositRequest {
             amount,
             mega,
             registry_pid,
@@ -315,7 +315,7 @@ impl Client {
         } = req;
         let delegate = true;
         let relay_data = {
-            let instr = RegistryInstruction::StakeIntent {
+            let instr = RegistryInstruction::Deposit {
                 amount,
                 mega,
                 delegate,
@@ -360,14 +360,14 @@ impl Client {
             relay_data,
             relay_signers: vec![&stake_beneficiary],
         })?;
-        Ok(LockedStakeIntentResponse { tx: resp.tx })
+        Ok(RegistryDepositResponse { tx: resp.tx })
     }
 
-    pub fn locked_stake_intent_withdrawal(
+    pub fn registry_withdraw(
         &self,
-        req: LockedStakeIntentWithdrawalRequest,
-    ) -> Result<LockedStakeIntentWithdrawalResponse, ClientError> {
-        let LockedStakeIntentWithdrawalRequest {
+        req: RegistryWithdrawRequest,
+    ) -> Result<RegistryWithdrawResponse, ClientError> {
+        let RegistryWithdrawRequest {
             amount,
             mega,
             registry_pid,
@@ -382,7 +382,7 @@ impl Client {
         } = req;
         let delegate = true;
         let relay_data = {
-            let instr = RegistryInstruction::StakeIntentWithdrawal {
+            let instr = RegistryInstruction::Withdraw {
                 amount,
                 mega,
                 delegate,
@@ -427,7 +427,7 @@ impl Client {
             relay_signers: vec![&stake_beneficiary],
         })?;
 
-        Ok(LockedStakeIntentWithdrawalResponse { tx: resp.tx })
+        Ok(RegistryWithdrawResponse { tx: resp.tx })
     }
 }
 
@@ -642,7 +642,7 @@ pub struct MigrateResponse {
     pub tx: Signature,
 }
 
-pub struct LockedStakeIntentRequest<'a> {
+pub struct RegistryDepositRequest<'a> {
     pub amount: u64,
     pub mega: bool,
     pub registry_pid: Pubkey,
@@ -656,11 +656,11 @@ pub struct LockedStakeIntentRequest<'a> {
     pub pool_program_id: Pubkey,
 }
 
-pub struct LockedStakeIntentResponse {
+pub struct RegistryDepositResponse {
     pub tx: Signature,
 }
 
-pub struct LockedStakeIntentWithdrawalRequest<'a> {
+pub struct RegistryWithdrawRequest<'a> {
     pub amount: u64,
     pub mega: bool,
     pub registry_pid: Pubkey,
@@ -674,7 +674,7 @@ pub struct LockedStakeIntentWithdrawalRequest<'a> {
     pub pool_program_id: Pubkey,
 }
 
-pub struct LockedStakeIntentWithdrawalResponse {
+pub struct RegistryWithdrawResponse {
     pub tx: Signature,
 }
 

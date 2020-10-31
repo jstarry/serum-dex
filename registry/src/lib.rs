@@ -116,7 +116,7 @@ pub mod instruction {
         /// 7. `[writable]` Entity account to stake to.
         /// 8. `[]`         Registrar.
         /// 9. `[]`         Clock.
-        StakeIntent {
+        Deposit {
             amount: u64,
             mega: bool,
             delegate: bool,
@@ -124,7 +124,7 @@ pub mod instruction {
         /// Accounts:
         ///
         /// Same as StakeIntent.
-        StakeIntentWithdrawal {
+        Withdraw {
             amount: u64,
             mega: bool,
             delegate: bool,

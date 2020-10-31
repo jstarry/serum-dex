@@ -17,7 +17,7 @@ pub fn handler(
     is_mega: bool,
     is_delegate: bool,
 ) -> Result<(), RegistryError> {
-    info!("handler: stake-intent-withdrawal");
+    info!("handler: withdraw");
 
     let acc_infos = &mut accounts.iter();
 
@@ -93,7 +93,7 @@ pub fn handler(
 }
 
 fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, RegistryError> {
-    info!("access-control: stake-intent-withdrawal");
+    info!("access-control: withdraw");
 
     let AccessControlRequest {
         delegate_owner_acc_info,
@@ -165,7 +165,7 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
 }
 
 fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
-    info!("state-transition: stake-intent-withdrawal");
+    info!("state-transition: withdraw");
 
     let StateTransitionRequest {
         entity,

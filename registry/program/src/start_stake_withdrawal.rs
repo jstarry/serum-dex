@@ -23,6 +23,8 @@ pub fn handler(
 
     let acc_infos = &mut accounts.iter();
 
+    // TODO: no need to abide by the lockup interface here.
+
     // Lockup whitelist relay interface.
     let delegate_owner_acc_info = next_account_info(acc_infos)?;
     let _dummy_acc_info = next_account_info(acc_infos)?;

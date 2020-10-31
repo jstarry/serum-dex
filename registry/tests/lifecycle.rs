@@ -342,7 +342,7 @@ fn lifecycle() {
             .unwrap();
     }
 
-    // Stake SRM.
+    // Stake the deposited SRM.
     let user_pool_token = {
         let StakeResponse {
             tx: _,

@@ -224,6 +224,7 @@ impl Client {
             mega,
             depositor_assets,
             depositor_pool_token,
+            beneficiary.pubkey(),
             vault_authority,
             false,
         )?;
@@ -269,7 +270,6 @@ impl Client {
             mega,
             user_assets,
             user_pool_token,
-            user_token_authority,
             pool_program_id,
         } = req;
         let delegate = false;
@@ -288,8 +288,8 @@ impl Client {
             AccountMeta::new(pending_withdrawal.pubkey(), false),
             AccountMeta::new(r.escrow.vault, false),
             AccountMeta::new(r.escrow.mega_vault, false),
-            AccountMeta::new(member, false),
             //
+            AccountMeta::new(member, false),
             AccountMeta::new_readonly(beneficiary.pubkey(), true),
             AccountMeta::new(entity, false),
             AccountMeta::new_readonly(registrar, false),
@@ -303,7 +303,8 @@ impl Client {
             mega,
             user_assets,
             Some(user_pool_token),
-            user_token_authority.pubkey(),
+            beneficiary.pubkey(), // Not used since pool token is given.
+            beneficiary.pubkey(),
             true,
         )?;
 
@@ -533,27 +534,28 @@ impl Client {
         registrar: Pubkey,
         mega: bool,
         depositor: Vec<Pubkey>,
-        depositor_pool_token: Option<Pubkey>,
-        depositor_authority: Pubkey,
-        depositor_authority_signer: bool, // true if we need signature for depositor-authority
+        pool_token: Option<Pubkey>,
+        pool_token_owner: Pubkey,
+        authority: Pubkey,
+        auth_signer: bool,
     ) -> Result<(Vec<AccountMeta>, Pubkey), ClientError> {
         let (mut accounts, main_pool_mint) =
             self.common_pool_accounts(pool_program_id, registrar, mega)?;
-        let depositor_pool_token = {
-            if let Some(dpt) = depositor_pool_token {
-                dpt
+        let pool_token = {
+            if let Some(spt) = pool_token {
+                spt
             } else {
                 rpc::create_token_account(
                     self.rpc(),
                     &main_pool_mint.into(),
-                    &depositor_authority,
+                    &pool_token_owner,
                     self.payer(),
                 )?
                 .pubkey()
             }
         };
         // Stake specific accounts.
-        accounts.push(AccountMeta::new(depositor_pool_token, false));
+        accounts.push(AccountMeta::new(pool_token, false));
         accounts.extend_from_slice(
             depositor
                 .iter()
@@ -561,12 +563,12 @@ impl Client {
                 .collect::<Vec<_>>()
                 .as_slice(),
         );
-        if depositor_authority_signer {
-            accounts.push(AccountMeta::new_readonly(depositor_authority, true));
+        if auth_signer {
+            accounts.push(AccountMeta::new_readonly(authority, true));
         } else {
-            accounts.push(AccountMeta::new_readonly(depositor_authority, false));
+            accounts.push(AccountMeta::new_readonly(authority, false));
         }
-        Ok((accounts, depositor_pool_token))
+        Ok((accounts, pool_token))
     }
 }
 

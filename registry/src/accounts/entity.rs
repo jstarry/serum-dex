@@ -153,7 +153,7 @@ impl Entity {
     /// enter the staking pool.
     pub fn meets_activation_requirements(&self, ctx: &StakeContext, registrar: &Registrar) -> bool {
         self.activation_amount(ctx) >= registrar.reward_activation_threshold
-            && self.balances.spt_mega_amount >= 1
+            && (self.balances.spt_mega_amount >= 1 || self.balances.mega_stake_intent >= 1)
     }
 }
 

@@ -221,10 +221,10 @@ impl Member {
         }
     }
     pub fn stake_is_empty(&self) -> bool {
-        self.books.main.balances.spt_amount != 0
-            || self.books.main.balances.spt_mega_amount != 0
-            || self.books.delegate.balances.spt_amount != 0
-            || self.books.delegate.balances.spt_mega_amount != 0
+        self.books.main.balances.spt_amount == 0
+            && self.books.main.balances.spt_mega_amount == 0
+            && self.books.delegate.balances.spt_amount == 0
+            && self.books.delegate.balances.spt_mega_amount == 0
     }
     pub fn set_delegate(&mut self, delegate: Pubkey) {
         assert!(self.books.delegate.balances.spt_amount == 0);

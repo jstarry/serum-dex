@@ -132,6 +132,8 @@ fn access_control(req: AccessControlRequest) -> Result<(), RegistryError> {
     // stake for a new generation.
     if member.generation != entity.generation {
         if !member.stake_is_empty() {
+            #[cfg(feature = "program")]
+            solana_sdk::info!(&format!("member stkae not empty {:?}", member));
             return Err(RegistryErrorCode::StaleStakeNeedsWithdrawal)?;
         }
     }

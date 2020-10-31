@@ -92,7 +92,7 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
     } = req;
 
     if let Some(wt) = watchtower {
-        //        member.watchtower = wt;
+        member.watchtower = wt;
     }
     if let Some(d) = delegate {
         member.set_delegate(d);

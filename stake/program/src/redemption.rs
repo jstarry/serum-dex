@@ -15,9 +15,9 @@ pub fn handler(
     info!("handler: redemption");
 
     let &UserAccounts {
-        pool_token_account,
-        asset_accounts,
-        authority,
+        pool_token_account, // Owned by `authority`.
+        asset_accounts,     // Registry escrow accounts.
+        authority,          // Registry's Member beneficiary.
     } = ctx
         .user_accounts
         .as_ref()

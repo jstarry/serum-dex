@@ -15,9 +15,9 @@ pub fn handler(
     info!("handler: creation");
 
     let &UserAccounts {
-        pool_token_account,
-        asset_accounts,
-        authority,
+        pool_token_account, // Owned by Registry's member beneficiary.
+        asset_accounts,     // Owned by `authority`.
+        authority,          // Registry's program-derived address.
     } = ctx
         .user_accounts
         .as_ref()
@@ -120,7 +120,7 @@ pub fn handler(
         )?;
     }
 
-    // Mint `spt_amount` of staking pool tokens.
+    // Mint `spt_amount` of staking pool tokens to the Registry's beneficiary.
     {
         let mint_tokens_instr = token_instruction::mint_to(
             &spl_token::ID,

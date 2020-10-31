@@ -325,7 +325,7 @@ fn lifecycle() {
         assert_eq!(msrm_vault.amount, 1);
     }
 
-    // Stake intent more SRM.
+    // Deposit more SRM.
     {
         client
             .deposit(DepositRequest {

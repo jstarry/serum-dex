@@ -73,7 +73,10 @@ pub fn handler(
                         registrar: &registrar,
                         clock: &clock,
                         registrar_acc_info,
-                        vault_acc_info,
+                        vault_acc_info: match is_mega {
+                            true => mega_vault_acc_info,
+                            false => vault_acc_info,
+                        },
                         tok_authority_acc_info,
                         depositor_tok_acc_info,
                         member_acc_info,

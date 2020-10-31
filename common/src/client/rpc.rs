@@ -54,8 +54,18 @@ pub fn create_token_account(
     owner_pubkey: &Pubkey,
     payer: &Keypair,
 ) -> Result<Keypair> {
+    create_token_account_with_delegate(client, mint_pubkey, owner_pubkey, None, payer)
+}
+
+pub fn create_token_account_with_delegate(
+    client: &RpcClient,
+    mint_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    delegate: Option<(&Pubkey, u64, &Keypair)>,
+    payer: &Keypair,
+) -> Result<Keypair> {
     let spl_account = Keypair::generate(&mut OsRng);
-    let signers = vec![payer, &spl_account];
+    let mut signers = vec![payer, &spl_account];
 
     let lamports = client.get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;
 
@@ -74,7 +84,19 @@ pub fn create_token_account(
         &owner_pubkey,
     )?;
 
-    let instructions = vec![create_account_instr, init_account_instr];
+    let mut instructions = vec![create_account_instr, init_account_instr];
+
+    if let Some((delegate, amount, owner)) = delegate {
+        instructions.push(token_instruction::approve(
+            &spl_token::ID,
+            &spl_account.pubkey(),
+            delegate,
+            &owner.pubkey(),
+            &[],
+            amount,
+        )?);
+        signers.push(owner);
+    }
 
     let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
 

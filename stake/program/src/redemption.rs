@@ -15,7 +15,7 @@ pub fn handler(
     info!("handler: redemption");
 
     let &UserAccounts {
-        pool_token_account, // Owned by `authority`.
+        pool_token_account, // Owned by Member beneficiary. `authority` has delegate access as an awkward way to shoehorn this.
         asset_accounts,     // Registry escrow accounts.
         authority,          // Registry's Member beneficiary.
     } = ctx
@@ -44,7 +44,7 @@ pub fn handler(
 
     // Transfer out the SRM to the user.
     {
-        let user_token_acc_info = &asset_accounts[0];
+        let escrow_token_acc_info = &asset_accounts[0];
         let pool_token_vault_acc_info = &ctx.pool_vault_accounts[0];
         let asset_amount = basket.quantities[0]
             .try_into()
@@ -52,7 +52,7 @@ pub fn handler(
         let transfer_instr = token_instruction::transfer(
             &spl_token::ID,
             pool_token_vault_acc_info.key,
-            user_token_acc_info.key,
+            escrow_token_acc_info.key,
             ctx.pool_authority.key,
             &[],
             asset_amount,
@@ -60,7 +60,7 @@ pub fn handler(
         solana_sdk::program::invoke_signed(
             &transfer_instr,
             &[
-                user_token_acc_info.clone(),
+                escrow_token_acc_info.clone(),
                 pool_token_vault_acc_info.clone(),
                 ctx.pool_authority.clone(),
                 ctx.spl_token_program.expect("must be provided").clone(),
@@ -71,7 +71,7 @@ pub fn handler(
 
     // Transer out the MSRM to the user.
     if asset_accounts.len() == 2 {
-        let user_token_acc_info = &asset_accounts[1];
+        let escrow_token_acc_info = &asset_accounts[1];
         let pool_token_vault_acc_info = &ctx.pool_vault_accounts[1];
         let asset_amount = basket.quantities[1]
             .try_into()
@@ -79,7 +79,7 @@ pub fn handler(
         let transfer_instr = token_instruction::transfer(
             &spl_token::ID,
             pool_token_vault_acc_info.key,
-            user_token_acc_info.key,
+            escrow_token_acc_info.key,
             ctx.pool_authority.key,
             &[],
             asset_amount,
@@ -87,7 +87,7 @@ pub fn handler(
         solana_sdk::program::invoke_signed(
             &transfer_instr,
             &[
-                user_token_acc_info.clone(),
+                escrow_token_acc_info.clone(),
                 pool_token_vault_acc_info.clone(),
                 ctx.pool_authority.clone(),
                 ctx.spl_token_program.expect("must be provided").clone(),

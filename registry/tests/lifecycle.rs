@@ -308,7 +308,7 @@ fn lifecycle() {
                 entity,
                 member,
                 beneficiary: &beneficiary,
-                depositor_pool_token: None,
+                user_pool_token: None,
                 pool_token_amount: 1,
                 pool_program_id: stake_pid,
                 mega: true,
@@ -317,9 +317,7 @@ fn lifecycle() {
         let user_pool_token: TokenAccount =
             rpc::get_token_account(client.rpc(), &depositor_pool_token).unwrap();
         assert_eq!(user_pool_token.amount, 1);
-        assert_eq!(user_pool_token.owner, god_owner.pubkey());
-        // TODO: force the staking pool token owner to be beneficiary?
-        // assert_eq!(user_pool_token.owner, beneficiary.pubkey());
+        assert_eq!(user_pool_token.owner, beneficiary.pubkey());
         let (srm_vault, msrm_vault) = client.stake_mega_pool_asset_vaults(&registrar).unwrap();
         assert_eq!(srm_vault.amount, 0);
         assert_eq!(msrm_vault.amount, 1);
@@ -353,7 +351,7 @@ fn lifecycle() {
                 entity,
                 member,
                 beneficiary: &beneficiary,
-                depositor_pool_token: None,
+                user_pool_token: None,
                 pool_token_amount: stake_intent_amount,
                 pool_program_id: stake_pid,
                 mega: false,
@@ -362,7 +360,7 @@ fn lifecycle() {
         let user_pool_token: TokenAccount =
             rpc::get_token_account(client.rpc(), &depositor_pool_token).unwrap();
         assert_eq!(user_pool_token.amount, stake_intent_amount);
-        assert_eq!(user_pool_token.owner, god_owner.pubkey());
+        assert_eq!(user_pool_token.owner, beneficiary.pubkey());
         let pool_vault = client.stake_pool_asset_vault(&registrar).unwrap();
         assert_eq!(pool_vault.amount, stake_intent_amount);
 
@@ -387,10 +385,10 @@ fn lifecycle() {
                 beneficiary: &beneficiary,
                 spt_amount: stake_intent_amount,
                 mega: false,
-                user_assets: vec![new_account],
                 user_pool_token,
-                user_token_authority: &god_owner,
                 pool_program_id: stake_pid,
+                user_token: new_account,
+                user_mega_token: None,
             })
             .unwrap();
         let user_asset_token: TokenAccount =

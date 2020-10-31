@@ -79,6 +79,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
         for (asset_info, vault_account) in
             state.assets.iter().zip(context.pool_vault_accounts.iter())
         {
+            info!("checking pool context token account");
             check_account_address(vault_account, &asset_info.vault_address)?;
             check_token_account(
                 vault_account,
@@ -144,12 +145,14 @@ impl<'a, 'b> UserAccounts<'a, 'b> {
         asset_accounts: &'a [AccountInfo<'b>],
         authority: &'a AccountInfo<'b>,
     ) -> Result<Self, ProgramError> {
+        info!("checking user accounts token account");
         check_token_account(
             pool_token_account,
             state.pool_token_mint.as_ref(),
             authority.key,
         )?;
         for (asset_info, account) in state.assets.iter().zip(asset_accounts.iter()) {
+            info!("checking user accounts token account");
             check_token_account(account, asset_info.mint.as_ref(), authority.key)?;
         }
         Ok(UserAccounts {
@@ -248,7 +251,10 @@ fn check_token_account(
         return Err(ProgramError::InvalidArgument);
     }
     if &token_account.owner != authority && token_account.delegate != COption::Some(*authority) {
-        info!("Incorrect spl-token account owner");
+        info!(&format!(
+            "Incorrect spl-token account owner {:?}, {:?}",
+            token_account, authority
+        ));
         return Err(ProgramError::InvalidArgument);
     }
     Ok(())

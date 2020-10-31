@@ -23,23 +23,20 @@ pub fn handler(
 
     let acc_infos = &mut accounts.iter();
 
-    // TODO: no need to abide by the lockup interface here.
-
-    // Lockup whitelist relay interface.
-    let delegate_owner_acc_info = next_account_info(acc_infos)?;
-    let _dummy_acc_info = next_account_info(acc_infos)?;
-    let vault_authority_acc_info = next_account_info(acc_infos)?;
-    let tok_program_acc_info = next_account_info(acc_infos)?;
-
-    // Program specific.
     let pending_withdrawal_acc_info = next_account_info(acc_infos)?;
+    // TODO: these should be given in the pool api. So can just pull out of
+    //       there instead of duplicating.
     let escrow_vault_acc_info = next_account_info(acc_infos)?;
     let mega_escrow_vault_acc_info = next_account_info(acc_infos)?;
 
     let member_acc_info = next_account_info(acc_infos)?;
     let beneficiary_acc_info = next_account_info(acc_infos)?;
     let entity_acc_info = next_account_info(acc_infos)?;
+
     let registrar_acc_info = next_account_info(acc_infos)?;
+    let vault_authority_acc_info = next_account_info(acc_infos)?;
+
+    let tok_program_acc_info = next_account_info(acc_infos)?;
     let clock_acc_info = next_account_info(acc_infos)?;
     let rent_acc_info = next_account_info(acc_infos)?;
 
@@ -72,7 +69,6 @@ pub fn handler(
         beneficiary_acc_info,
         registrar_acc_info,
         member_acc_info,
-        delegate_owner_acc_info,
         entity_acc_info,
         rent_acc_info,
         clock_acc_info,
@@ -134,7 +130,6 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         beneficiary_acc_info,
         member_acc_info,
         entity_acc_info,
-        delegate_owner_acc_info,
         rent_acc_info,
         clock_acc_info,
         program_id,
@@ -161,8 +156,8 @@ fn access_control(req: AccessControlRequest) -> Result<AccessControlResponse, Re
         member_acc_info,
         entity_acc_info,
         beneficiary_acc_info,
-        Some(delegate_owner_acc_info),
-        delegate,
+        None,
+        false,
         program_id,
     )?;
     // TODO: check the program's escrow vault is valid.
@@ -344,7 +339,6 @@ struct AccessControlRequest<'a, 'b> {
     pending_withdrawal_acc_info: &'a AccountInfo<'b>,
     beneficiary_acc_info: &'a AccountInfo<'b>,
     member_acc_info: &'a AccountInfo<'b>,
-    delegate_owner_acc_info: &'a AccountInfo<'b>,
     entity_acc_info: &'a AccountInfo<'b>,
     rent_acc_info: &'a AccountInfo<'b>,
     clock_acc_info: &'a AccountInfo<'b>,

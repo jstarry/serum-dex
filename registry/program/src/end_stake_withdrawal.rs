@@ -36,12 +36,8 @@ pub fn handler(
 
     let user_acc_info = next_account_info(acc_infos)?;
     let user_mega_acc_info = next_account_info(acc_infos)?;
-    let mut user_delegate_acc_info = None;
-    let mut user_delegate_mega_acc_info = None;
-    if delegate {
-        user_delegate_acc_info = Some(next_account_info(acc_infos)?);
-        user_delegate_mega_acc_info = Some(next_account_info(acc_infos)?);
-    }
+    let user_delegate_acc_info = next_account_info(acc_infos)?;
+    let user_delegate_mega_acc_info = next_account_info(acc_infos)?;
 
     let AccessControlResponse { ref registrar } = access_control(AccessControlRequest {
         registrar_acc_info,
@@ -62,32 +58,20 @@ pub fn handler(
     PendingWithdrawal::unpack_mut(
         &mut pending_withdrawal_acc_info.try_borrow_mut_data()?,
         &mut |pending_withdrawal: &mut PendingWithdrawal| {
-            Entity::unpack_mut(
-                &mut entity_acc_info.try_borrow_mut_data()?,
-                &mut |entity: &mut Entity| {
-                    Member::unpack_mut(
-                        &mut member_acc_info.try_borrow_mut_data()?,
-                        &mut |member: &mut Member| {
-                            state_transition(StateTransitionRequest {
-                                pending_withdrawal,
-                                user_acc_info,
-                                user_mega_acc_info,
-                                user_delegate_acc_info,
-                                user_delegate_mega_acc_info,
-                                vault_authority_acc_info,
-                                tok_program_acc_info,
-                                registrar,
-                                registrar_acc_info,
-                                escrow_vault_acc_info,
-                                mega_escrow_vault_acc_info,
-                                entity,
-                                member,
-                            })
-                            .map_err(Into::into)
-                        },
-                    )
-                },
-            )
+            state_transition(StateTransitionRequest {
+                pending_withdrawal,
+                user_acc_info,
+                user_mega_acc_info,
+                user_delegate_acc_info,
+                user_delegate_mega_acc_info,
+                vault_authority_acc_info,
+                tok_program_acc_info,
+                registrar,
+                registrar_acc_info,
+                escrow_vault_acc_info,
+                mega_escrow_vault_acc_info,
+            })
+            .map_err(Into::into)
         },
     )?;
 
@@ -161,63 +145,53 @@ fn state_transition(req: StateTransitionRequest) -> Result<(), RegistryError> {
         registrar_acc_info,
         escrow_vault_acc_info,
         mega_escrow_vault_acc_info,
-        entity,
-        member,
     } = req;
 
-    // Send the funds from the escrow vault to the user.
-    {
-        if pending_withdrawal.payment.asset_amount > 0 {
-            invoke_token_transfer(
-                escrow_vault_acc_info,
-                user_acc_info,
-                vault_authority_acc_info,
-                tok_program_acc_info,
-                registrar_acc_info,
-                registrar,
-                pending_withdrawal.payment.asset_amount,
-            )?;
-        }
-        if pending_withdrawal.payment.mega_asset_amount > 0 {
-            invoke_token_transfer(
-                mega_escrow_vault_acc_info,
-                user_mega_acc_info,
-                vault_authority_acc_info,
-                tok_program_acc_info,
-                registrar_acc_info,
-                registrar,
-                pending_withdrawal.payment.mega_asset_amount,
-            )?;
-        }
-        if pending_withdrawal.delegate_payment.asset_amount > 0 {
-            let user_delegate_acc_info =
-                user_delegate_acc_info.ok_or(RegistryErrorCode::DelegateAccountsNotProvided)?;
-            invoke_token_transfer(
-                escrow_vault_acc_info,
-                user_delegate_acc_info,
-                vault_authority_acc_info,
-                tok_program_acc_info,
-                registrar_acc_info,
-                registrar,
-                pending_withdrawal.delegate_payment.asset_amount,
-            )?;
-        }
-        if pending_withdrawal.delegate_payment.mega_asset_amount > 0 {
-            let user_delegate_mega_acc_info = user_delegate_mega_acc_info
-                .ok_or(RegistryErrorCode::DelegateAccountsNotProvided)?;
-            invoke_token_transfer(
-                mega_escrow_vault_acc_info,
-                user_delegate_mega_acc_info,
-                vault_authority_acc_info,
-                tok_program_acc_info,
-                registrar_acc_info,
-                registrar,
-                pending_withdrawal.delegate_payment.mega_asset_amount,
-            )?;
-        }
+    if pending_withdrawal.payment.asset_amount > 0 {
+        invoke_token_transfer(
+            escrow_vault_acc_info,
+            user_acc_info,
+            vault_authority_acc_info,
+            tok_program_acc_info,
+            registrar_acc_info,
+            registrar,
+            pending_withdrawal.payment.asset_amount,
+        )?;
+    }
+    if pending_withdrawal.payment.mega_asset_amount > 0 {
+        invoke_token_transfer(
+            mega_escrow_vault_acc_info,
+            user_mega_acc_info,
+            vault_authority_acc_info,
+            tok_program_acc_info,
+            registrar_acc_info,
+            registrar,
+            pending_withdrawal.payment.mega_asset_amount,
+        )?;
+    }
+    if pending_withdrawal.delegate_payment.asset_amount > 0 {
+        invoke_token_transfer(
+            escrow_vault_acc_info,
+            user_delegate_acc_info,
+            vault_authority_acc_info,
+            tok_program_acc_info,
+            registrar_acc_info,
+            registrar,
+            pending_withdrawal.delegate_payment.asset_amount,
+        )?;
+    }
+    if pending_withdrawal.delegate_payment.mega_asset_amount > 0 {
+        invoke_token_transfer(
+            mega_escrow_vault_acc_info,
+            user_delegate_mega_acc_info,
+            vault_authority_acc_info,
+            tok_program_acc_info,
+            registrar_acc_info,
+            registrar,
+            pending_withdrawal.delegate_payment.mega_asset_amount,
+        )?;
     }
 
-    // Burn for one time use.
     pending_withdrawal.burned = true;
 
     Ok(())
@@ -251,10 +225,8 @@ struct StateTransitionRequest<'a, 'b, 'c> {
     registrar_acc_info: &'a AccountInfo<'b>,
     user_acc_info: &'a AccountInfo<'b>,
     user_mega_acc_info: &'a AccountInfo<'b>,
-    user_delegate_acc_info: Option<&'a AccountInfo<'b>>,
-    user_delegate_mega_acc_info: Option<&'a AccountInfo<'b>>,
+    user_delegate_acc_info: &'a AccountInfo<'b>,
+    user_delegate_mega_acc_info: &'a AccountInfo<'b>,
     registrar: &'c Registrar,
     pending_withdrawal: &'c mut PendingWithdrawal,
-    entity: &'c mut Entity,
-    member: &'c mut Member,
 }

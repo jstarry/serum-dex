@@ -746,9 +746,9 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi"
-version = "1.4.3"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63bbbf3bf442bc7e4e76b57af858030fdcb8953cdbcbc6bf3ddd4819aa38e982"
+checksum = "1b4f473fdb966b501d1315ececb85cc702b8e67a16ea36811254c087dd1fc255"
 dependencies = [
  "bs58",
  "bv",
@@ -766,9 +766,9 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "1.4.3"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdb4a177d5f46025b619c83d0562e6ea302a871f98148bd7edbc82416ac76949"
+checksum = "485bfe1ab0c530c8df9c9ba6c9f4ee7cd084a4ebb56580505877c2c116843f8a"
 dependencies = [
  "lazy_static",
  "proc-macro2 1.0.19",
@@ -779,9 +779,9 @@ dependencies = [
 
 [[package]]
 name = "solana-logger"
-version = "1.4.3"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8f251c26d46a55bf5c3f6ef5e999e8949909eab952e19a9261e6434ebd31041"
+checksum = "25d7b2d3c0e702e1548d726d1470cbeef6026a670f68643f083ca0a354607f9b"
 dependencies = [
  "env_logger",
  "lazy_static",
@@ -790,9 +790,9 @@ dependencies = [
 
 [[package]]
 name = "solana-program"
-version = "1.4.3"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d4621f2d8ca6d7ac09c0138a02d21def0a736b70feab1f2516f5a74f1ee642f"
+checksum = "5a3cced77240271e0e60067af57df1d345d002dec251cc4e257be364eaca9c56"
 dependencies = [
  "bincode",
  "bs58",
@@ -820,9 +820,9 @@ dependencies = [
 
 [[package]]
 name = "solana-sdk-macro"
-version = "1.4.3"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a02d89c5d8c3c098552e39ad716f8e25b1b9ce95905ad0c770c78d36e1ebcc39"
+checksum = "c61aeaa0e48473d8ba532d2ad3560c23da8188e4515b847daac34ed07a1ae519"
 dependencies = [
  "bs58",
  "proc-macro2 1.0.19",
@@ -833,14 +833,14 @@ dependencies = [
 
 [[package]]
 name = "spl-token"
-version = "2.0.8"
-source = "git+https://github.com/solana-labs/solana-program-library#de23dbc8a04c027215392063d2ef414d57873de9"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f77fa0b41cbc82d1d7c8f2d914b49e9a1a7b6e32af952d03383fb989c42bc89"
 dependencies = [
  "arrayref",
  "num-derive",
  "num-traits",
  "num_enum",
- "remove_dir_all",
  "solana-program",
  "thiserror",
 ]
